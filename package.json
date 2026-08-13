@@ -3,7 +3,9 @@
   "version": "1.0.0",
   "scripts": {
     "dev:api": "bun --filter api start:dev",
-    "build:api": "bun --filter api build"
+    "build:api": "bun --filter api build",
+    "dev:worker": "bun --filter worker start:dev",
+    "build:worker": "bun --filter worker build"
   },
   "workspaces": [
     "packages/*",
