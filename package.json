@@ -1,0 +1,12 @@
+{
+  "name": "pulse-guard",
+  "version": "1.0.0",
+  "scripts": {
+    "dev:api": "bun --filter api start:dev",
+    "build:api": "bun --filter api build"
+  },
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ]
+}

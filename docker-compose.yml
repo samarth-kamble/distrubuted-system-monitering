@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: pulseguard-postgres
+    environment:
+      POSTGRES_USER: pulseguard
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: pulseguard
+    ports:
+      - '5432:5432'
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    restart: always
+
+  redis:
+    image: redis:7-alpine
+    container_name: pulseguard-redis
+    ports:
+      - '6379:6379'
+    volumes:
+      - redisdata:/data
+    restart: always
+
+volumes:
+  pgdata:
+  redisdata:
