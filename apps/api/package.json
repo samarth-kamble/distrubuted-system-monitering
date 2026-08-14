@@ -25,6 +25,7 @@
     "@nestjs/jwt": "^11.0.2",
     "@nestjs/passport": "^11.0.5",
     "@nestjs/platform-express": "^11.0.1",
+    "@nestjs/throttler": "^6.5.0",
     "@pulseguard/shared": "workspace:*",
     "argon2": "^0.45.1",
     "class-transformer": "^0.5.1",
