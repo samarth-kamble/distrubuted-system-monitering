@@ -19,6 +19,7 @@
   },
   "devDependencies": {
     "@types/pg": "^8.21.0",
+    "argon2": "^0.45.1",
     "prisma": "^7.9.1"
   }
 }

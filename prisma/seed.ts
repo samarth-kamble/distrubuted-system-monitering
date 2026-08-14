@@ -1,6 +1,7 @@
 import { PrismaClient } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { Pool } from 'pg';
+import * as argon2 from 'argon2';
 
 // Setup driver adapter for Prisma 7
 const connectionString = process.env.DATABASE_URL;
@@ -12,21 +13,20 @@ async function main() {
   console.log('Seeding database...');
   
   // Clean existing entries
-  await prisma.demo.deleteMany();
+  await prisma.user.deleteMany();
 
-  const d1 = await prisma.demo.create({
+  // Create test user
+  const hashedPassword = await argon2.hash('Password123!');
+  const testUser = await prisma.user.create({
     data: {
-      name: 'First Demo Entry',
+      email: 'test@example.com',
+      passwordHash: hashedPassword,
+      name: 'Test User',
+      role: 'ADMIN',
     },
   });
 
-  const d2 = await prisma.demo.create({
-    data: {
-      name: 'Second Demo Entry',
-    },
-  });
-
-  console.log('Seeded entries:', { d1, d2 });
+  console.log('Seeded entries:', { testUser });
 }
 
 main()
@@ -38,3 +38,4 @@ main()
     await prisma.$disconnect();
     await pool.end();
   });
+

@@ -15,10 +15,10 @@ export class AppService {
     );
 
     try {
-      // Query demo records just to verify DB connectivity
-      const demosCount = await this.prisma.demo.count();
+      // Query user records just to verify DB connectivity
+      const usersCount = await this.prisma.user.count();
       this.logger.log(
-        `Active monitor database check: found ${demosCount} demo items.`,
+        `Active monitor database check: found ${usersCount} users in database.`,
       );
 
       // Simulating check executions
