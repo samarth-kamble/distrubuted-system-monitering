@@ -1,44 +1,68 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
+import { InjectQueue } from '@nestjs/bullmq';
+import { Queue } from 'bullmq';
 import { PrismaService } from './prisma/prisma.service';
 
 @Injectable()
 export class AppService {
   private readonly logger = new Logger(AppService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    @InjectQueue('health-check') private readonly healthCheckQueue: Queue,
+  ) {}
 
   @Cron(CronExpression.EVERY_10_SECONDS)
   async handleHeartbeatCheck() {
     this.logger.log(
-      'Starting background health checks for configured monitors...',
+      'Starting sync of active monitors with background queue...',
     );
 
     try {
-      // Fetch only enabled services to monitor
       const activeServices = await this.prisma.service.findMany({
         where: { enabled: true },
       });
 
-      // Count disabled services to track skipped health checks
-      const disabledCount = await this.prisma.service.count({
-        where: { enabled: false },
-      });
+      const existingSchedulers = await this.healthCheckQueue.getJobSchedulers();
+      const activeServiceIds = new Set(activeServices.map((s) => s.id));
 
-      this.logger.log(
-        `Database check: ${activeServices.length} services are active. Skipped ${disabledCount} disabled services.`,
-      );
+      for (const scheduler of existingSchedulers) {
+        if (!scheduler.id) {
+          continue;
+        }
 
-      // Simulate running health checks on active services
+        if (!activeServiceIds.has(scheduler.id)) {
+          this.logger.log(
+            `[Sync] Removing obsolete job scheduler for service ID: ${scheduler.id}`,
+          );
+          await this.healthCheckQueue.removeJobScheduler(scheduler.id);
+        }
+      }
+
       for (const service of activeServices) {
+        const expectedIntervalMs = service.intervalSeconds * 1000;
         this.logger.log(
-          `[Heartbeat] Checking service "${service.name}" -> ${service.method} ${service.targetUrl}`,
+          `[Sync] Ensuring job scheduler for service: ${service.name} (every ${service.intervalSeconds}s)`,
+        );
+        await this.healthCheckQueue.upsertJobScheduler(
+          service.id,
+          { every: expectedIntervalMs },
+          {
+            name: 'check',
+            data: { serviceId: service.id },
+          },
         );
       }
 
-      this.logger.log('All active monitor heartbeats processed successfully.');
+      this.logger.log(
+        `[Sync] Completed reconciliation loop. Active services synced: ${activeServices.length}.`,
+      );
     } catch (error) {
-      this.logger.error('Error during monitoring checks execution:', error);
+      this.logger.error(
+        '[Sync] Error during database/queue synchronization:',
+        error,
+      );
     }
   }
 }
