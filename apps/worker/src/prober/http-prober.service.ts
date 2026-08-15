@@ -142,7 +142,9 @@ export class HttpProberService {
       });
 
       req.on('timeout', () => {
-        req.destroy(new Error('timeout'));
+        const timeoutError = new Error('timeout') as Error & { code?: string };
+        timeoutError.code = 'ETIMEDOUT';
+        req.destroy(timeoutError);
       });
 
       req.end();
