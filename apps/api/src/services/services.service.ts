@@ -1,7 +1,12 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateServiceDto } from './dto/create-service.dto';
 import { UpdateServiceDto } from './dto/update-service.dto';
+import { UserRole } from '@prisma/client';
 
 @Injectable()
 export class ServicesService {
@@ -16,26 +21,43 @@ export class ServicesService {
     });
   }
 
-  async findAll(userId: string) {
+  async findAll(userId: string, userRole: UserRole) {
+    if (userRole === UserRole.ADMIN) {
+      return this.prisma.service.findMany({
+        orderBy: { createdAt: 'desc' },
+      });
+    }
     return this.prisma.service.findMany({
       where: { userId },
       orderBy: { createdAt: 'desc' },
     });
   }
 
-  async findOne(userId: string, id: string) {
-    const service = await this.prisma.service.findFirst({
-      where: { id, userId },
+  async findOne(userId: string, userRole: UserRole, id: string) {
+    const service = await this.prisma.service.findUnique({
+      where: { id },
     });
+
     if (!service) {
       throw new NotFoundException(`Service with ID ${id} not found`);
     }
+
+    if (userRole !== UserRole.ADMIN && service.userId !== userId) {
+      throw new ForbiddenException(
+        'You do not have permission to access this service',
+      );
+    }
+
     return service;
   }
 
-  async update(userId: string, id: string, dto: UpdateServiceDto) {
-    // Ensure service exists and belongs to the user
-    await this.findOne(userId, id);
+  async update(
+    userId: string,
+    userRole: UserRole,
+    id: string,
+    dto: UpdateServiceDto,
+  ) {
+    await this.findOne(userId, userRole, id);
 
     return this.prisma.service.update({
       where: { id },
@@ -43,9 +65,8 @@ export class ServicesService {
     });
   }
 
-  async remove(userId: string, id: string) {
-    // Ensure service exists and belongs to the user
-    await this.findOne(userId, id);
+  async remove(userId: string, userRole: UserRole, id: string) {
+    await this.findOne(userId, userRole, id);
 
     return this.prisma.service.delete({
       where: { id },

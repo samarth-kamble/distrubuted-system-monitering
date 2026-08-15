@@ -15,14 +15,28 @@ export class AppService {
     );
 
     try {
-      // Query user records just to verify DB connectivity
-      const usersCount = await this.prisma.user.count();
+      // Fetch only enabled services to monitor
+      const activeServices = await this.prisma.service.findMany({
+        where: { enabled: true },
+      });
+
+      // Count disabled services to track skipped health checks
+      const disabledCount = await this.prisma.service.count({
+        where: { enabled: false },
+      });
+
       this.logger.log(
-        `Active monitor database check: found ${usersCount} users in database.`,
+        `Database check: ${activeServices.length} services are active. Skipped ${disabledCount} disabled services.`,
       );
 
-      // Simulating check executions
-      this.logger.log('All monitor heartbeats processed successfully.');
+      // Simulate running health checks on active services
+      for (const service of activeServices) {
+        this.logger.log(
+          `[Heartbeat] Checking service "${service.name}" -> ${service.method} ${service.targetUrl}`,
+        );
+      }
+
+      this.logger.log('All active monitor heartbeats processed successfully.');
     } catch (error) {
       this.logger.error('Error during monitoring checks execution:', error);
     }

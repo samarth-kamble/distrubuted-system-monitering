@@ -15,7 +15,10 @@ export class CreateServiceDto {
   @IsNotEmpty()
   name: string;
 
-  @IsUrl({}, { message: 'targetUrl must be a valid URL address' })
+  @IsUrl(
+    { protocols: ['http', 'https'], require_protocol: true },
+    { message: 'targetUrl must be a valid HTTP or HTTPS URL address' },
+  )
   targetUrl: string;
 
   @IsEnum(HttpMethod)
