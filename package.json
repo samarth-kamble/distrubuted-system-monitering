@@ -18,7 +18,9 @@
     "pg": "^8.23.0"
   },
   "devDependencies": {
+    "@types/cookie-parser": "^1.4.10",
     "@types/pg": "^8.21.0",
+    "api": "workspace:*",
     "argon2": "^0.45.1",
     "prisma": "^7.9.1"
   }
