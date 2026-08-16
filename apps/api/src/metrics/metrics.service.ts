@@ -1,7 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { Registry, Gauge } from 'prom-client';
-import { ServiceStatus, CheckStatus, IncidentStatus } from '@prisma/client';
+import {
+  ServiceStatus,
+  CheckStatus,
+  IncidentStatus,
+  UserRole,
+} from '@prisma/client';
 
 @Injectable()
 export class MetricsService {
@@ -175,5 +180,56 @@ export class MetricsService {
     }
 
     return this.registry.metrics();
+  }
+
+  async getSummary(userId: string, userRole: UserRole) {
+    const whereClause: { userId?: string } = {};
+
+    // Role scope: Viewers only see statistics for their own services
+    if (userRole !== UserRole.ADMIN && userRole !== UserRole.OPERATOR) {
+      whereClause.userId = userId;
+    }
+
+    const services = await this.prisma.service.findMany({
+      where: whereClause,
+    });
+
+    const statusCounts = {
+      [ServiceStatus.HEALTHY]: 0,
+      [ServiceStatus.DEGRADED]: 0,
+      [ServiceStatus.DOWN]: 0,
+      [ServiceStatus.RECOVERING]: 0,
+      [ServiceStatus.UNKNOWN]: 0,
+    };
+
+    for (const s of services) {
+      statusCounts[s.status]++;
+    }
+
+    // Incidents count
+    const incidentWhereClause: {
+      status: { in: IncidentStatus[] };
+      service?: {
+        userId: string;
+      };
+    } = {
+      status: { in: [IncidentStatus.OPEN, IncidentStatus.ACKNOWLEDGED] },
+    };
+
+    if (userRole !== UserRole.ADMIN && userRole !== UserRole.OPERATOR) {
+      incidentWhereClause.service = {
+        userId,
+      };
+    }
+
+    const activeIncidents = await this.prisma.incident.count({
+      where: incidentWhereClause,
+    });
+
+    return {
+      totalServices: services.length,
+      activeIncidents,
+      statusBreakdown: statusCounts,
+    };
   }
 }
