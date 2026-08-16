@@ -8,6 +8,7 @@ import { AuthModule } from './auth/auth.module';
 import { AuditInterceptor } from './auth/audit.interceptor';
 import { ServicesModule } from './services/services.module';
 import { IncidentsModule } from './incidents/incidents.module';
+import { MetricsModule } from './metrics/metrics.module';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { IncidentsModule } from './incidents/incidents.module';
     AuthModule,
     ServicesModule,
     IncidentsModule,
+    MetricsModule,
     ThrottlerModule.forRoot([
       {
         ttl: 60000,

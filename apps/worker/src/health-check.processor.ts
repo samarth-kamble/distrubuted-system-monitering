@@ -397,6 +397,36 @@ export class HealthCheckProcessor extends WorkerHost {
         await this.ensureIncidentResolved(service);
       }
 
+      if (
+        nextStatus === ServiceStatus.DEGRADED &&
+        service.status !== ServiceStatus.DEGRADED
+      ) {
+        await this.prisma.alert.create({
+          data: {
+            serviceId: service.id,
+            type: AlertType.SERVICE_DEGRADED,
+            title: 'Service Degraded',
+            message: `Service "${service.name}" is performing abnormally slow (latency: ${finalLatencyMs}ms) or has minor consecutive failures.`,
+            severity: AlertSeverity.MEDIUM,
+          },
+        });
+      }
+
+      if (
+        nextStatus === ServiceStatus.HEALTHY &&
+        service.status === ServiceStatus.DEGRADED
+      ) {
+        await this.prisma.alert.create({
+          data: {
+            serviceId: service.id,
+            type: AlertType.SERVICE_RECOVERED,
+            title: 'Service Restored',
+            message: `Service "${service.name}" latency has returned to normal (${finalLatencyMs}ms).`,
+            severity: AlertSeverity.INFO,
+          },
+        });
+      }
+
       if (nextStatus !== service.status) {
         this.logger.log(
           `[Processor] Status transition for service "${service.name}": ${service.status} -> ${nextStatus}`,
