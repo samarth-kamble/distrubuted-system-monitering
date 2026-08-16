@@ -82,6 +82,16 @@ export class AuthService {
     });
 
     if (!user) {
+      await this.prisma.auditLog.create({
+        data: {
+          action: 'login_failed',
+          resource: 'user',
+          metadata: {
+            email: dto.email.toLowerCase(),
+            reason: 'User not found',
+          },
+        },
+      });
       throw new UnauthorizedException('Invalid credentials');
     }
 
@@ -90,6 +100,17 @@ export class AuthService {
       dto.password,
     );
     if (!isPasswordValid) {
+      await this.prisma.auditLog.create({
+        data: {
+          userId: user.id,
+          action: 'login_failed',
+          resource: 'user',
+          metadata: {
+            email: dto.email.toLowerCase(),
+            reason: 'Incorrect password',
+          },
+        },
+      });
       throw new UnauthorizedException('Invalid credentials');
     }
 

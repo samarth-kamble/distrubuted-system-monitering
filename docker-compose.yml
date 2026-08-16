@@ -12,6 +12,11 @@ services:
       - '5432:5432'
     volumes:
       - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pulseguard"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
     restart: always
 
   redis:
@@ -21,6 +26,63 @@ services:
       - '6379:6379'
     volumes:
       - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: always
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    container_name: pulseguard-api
+    env_file:
+      - .env
+    ports:
+      - '3000:3000'
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: always
+
+  worker:
+    build:
+      context: .
+      dockerfile: apps/worker/Dockerfile
+    container_name: pulseguard-worker
+    env_file:
+      - .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: always
+
+  prometheus:
+    image: prom/prometheus:v2.50.1
+    container_name: pulseguard-prometheus
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports:
+      - '9090:9090'
+    depends_on:
+      - api
+    restart: always
+
+  grafana:
+    image: grafana/grafana-oss:10.4.0
+    container_name: pulseguard-grafana
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+    ports:
+      - '3001:3000'
+    depends_on:
+      - prometheus
     restart: always
 
 volumes:
