@@ -8,6 +8,7 @@ import {
   Delete,
   UseGuards,
   Request,
+  Query,
 } from '@nestjs/common';
 import { ServicesService } from './services.service';
 import { CreateServiceDto } from './dto/create-service.dto';
@@ -67,5 +68,44 @@ export class ServicesController {
   @Audit({ action: 'delete', resource: 'service', resourceIdParam: 'id' })
   remove(@Request() req: RequestWithUser, @Param('id') id: string) {
     return this.servicesService.remove(req.user.id, req.user.role, id);
+  }
+
+  @Post(':id/enable')
+  @Roles(UserRole.ADMIN, UserRole.OPERATOR)
+  @Audit({ action: 'enable', resource: 'service', resourceIdParam: 'id' })
+  enable(@Request() req: RequestWithUser, @Param('id') id: string) {
+    return this.servicesService.enable(req.user.id, req.user.role, id);
+  }
+
+  @Post(':id/disable')
+  @Roles(UserRole.ADMIN, UserRole.OPERATOR)
+  @Audit({ action: 'disable', resource: 'service', resourceIdParam: 'id' })
+  disable(@Request() req: RequestWithUser, @Param('id') id: string) {
+    return this.servicesService.disable(req.user.id, req.user.role, id);
+  }
+
+  @Get(':id/checks')
+  @Roles(UserRole.ADMIN, UserRole.OPERATOR, UserRole.VIEWER)
+  findChecks(
+    @Request() req: RequestWithUser,
+    @Param('id') id: string,
+    @Query('limit') limit?: string,
+    @Query('skip') skip?: string,
+  ) {
+    const parsedLimit = limit ? parseInt(limit, 10) : undefined;
+    const parsedSkip = skip ? parseInt(skip, 10) : undefined;
+    return this.servicesService.findChecks(
+      req.user.id,
+      req.user.role,
+      id,
+      parsedLimit,
+      parsedSkip,
+    );
+  }
+
+  @Get(':id/metrics')
+  @Roles(UserRole.ADMIN, UserRole.OPERATOR, UserRole.VIEWER)
+  getMetrics(@Request() req: RequestWithUser, @Param('id') id: string) {
+    return this.servicesService.getMetrics(req.user.id, req.user.role, id);
   }
 }
