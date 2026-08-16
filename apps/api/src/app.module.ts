@@ -7,12 +7,14 @@ import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './auth/auth.module';
 import { AuditInterceptor } from './auth/audit.interceptor';
 import { ServicesModule } from './services/services.module';
+import { IncidentsModule } from './incidents/incidents.module';
 
 @Module({
   imports: [
     PrismaModule,
     AuthModule,
     ServicesModule,
+    IncidentsModule,
     ThrottlerModule.forRoot([
       {
         ttl: 60000,

@@ -2,7 +2,15 @@ import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Job } from 'bullmq';
 import { Injectable, Logger } from '@nestjs/common';
 import * as crypto from 'crypto';
-import { CheckStatus, ServiceStatus } from '@prisma/client';
+import {
+  CheckStatus,
+  ServiceStatus,
+  IncidentStatus,
+  IncidentSeverity,
+  Service,
+  AlertType,
+  AlertSeverity,
+} from '@prisma/client';
 import { MONITOR_THRESHOLDS } from '@pulseguard/shared';
 import { PrismaService } from './prisma/prisma.service';
 import { HttpProberService } from './prober/http-prober.service';
@@ -77,6 +85,123 @@ export class HealthCheckProcessor extends WorkerHost {
     }
   }
 
+  private async ensureIncidentCreated(
+    service: Service,
+    finalStatus: CheckStatus,
+    finalResponseCode: number | null,
+    finalErrorMessage: string | null,
+  ): Promise<void> {
+    const existingIncident = await this.prisma.incident.findFirst({
+      where: {
+        serviceId: service.id,
+        status: { in: [IncidentStatus.OPEN, IncidentStatus.ACKNOWLEDGED] },
+      },
+    });
+
+    if (!existingIncident) {
+      let severity: IncidentSeverity = IncidentSeverity.CRITICAL;
+      if (finalStatus === CheckStatus.TIMEOUT) {
+        severity = IncidentSeverity.HIGH;
+      } else if (finalStatus === CheckStatus.ERROR) {
+        severity = IncidentSeverity.MEDIUM;
+      }
+
+      let reason = finalErrorMessage || 'Unknown health check failure';
+      if (finalResponseCode) {
+        reason = `HTTP ${finalResponseCode}: ${reason}`;
+      } else if (finalStatus === CheckStatus.TIMEOUT) {
+        reason = 'Request Timeout';
+      } else if (finalStatus === CheckStatus.ERROR) {
+        reason = 'Internal worker error during health check';
+      }
+
+      this.logger.log(
+        `[Processor] Creating Incident for service "${service.name}" (${service.id}) -> Severity: ${severity}, Reason: ${reason}`,
+      );
+
+      const newIncident = await this.prisma.incident.create({
+        data: {
+          serviceId: service.id,
+          severity,
+          reason,
+          status: IncidentStatus.OPEN,
+          startedAt: new Date(),
+        },
+      });
+
+      // Create an alert for incident creation
+      await this.prisma.alert.create({
+        data: {
+          serviceId: service.id,
+          incidentId: newIncident.id,
+          type: AlertType.INCIDENT_CREATED,
+          title: 'Incident Created',
+          message: `Downtime incident #${newIncident.id} has been opened for service "${service.name}".`,
+          severity: AlertSeverity.CRITICAL,
+        },
+      });
+
+      // Also create a SERVICE_DOWN alert
+      await this.prisma.alert.create({
+        data: {
+          serviceId: service.id,
+          incidentId: newIncident.id,
+          type: AlertType.SERVICE_DOWN,
+          title: 'Service Down',
+          message: `Service "${service.name}" is DOWN: ${reason}`,
+          severity: AlertSeverity.CRITICAL,
+        },
+      });
+    }
+  }
+
+  private async ensureIncidentResolved(service: Service): Promise<void> {
+    const activeIncident = await this.prisma.incident.findFirst({
+      where: {
+        serviceId: service.id,
+        status: { in: [IncidentStatus.OPEN, IncidentStatus.ACKNOWLEDGED] },
+      },
+    });
+
+    if (activeIncident) {
+      this.logger.log(
+        `[Processor] Service "${service.name}" recovered. Resolving Incident #${activeIncident.id}.`,
+      );
+
+      await this.prisma.incident.update({
+        where: { id: activeIncident.id },
+        data: {
+          status: IncidentStatus.RESOLVED,
+          resolvedAt: new Date(),
+        },
+      });
+
+      // Create a SERVICE_RECOVERED alert
+      await this.prisma.alert.create({
+        data: {
+          serviceId: service.id,
+          incidentId: activeIncident.id,
+          type: AlertType.SERVICE_RECOVERED,
+          title: 'Service Recovered',
+          message: `Service "${service.name}" has recovered successfully after hitting the recovery threshold.`,
+          severity: AlertSeverity.INFO,
+        },
+      });
+
+      // Create an INCIDENT_RESOLVED alert
+      await this.prisma.alert.create({
+        data: {
+          serviceId: service.id,
+          incidentId: activeIncident.id,
+          type: AlertType.INCIDENT_RESOLVED,
+          title: 'Incident Resolved',
+          message: `Downtime incident #${activeIncident.id} has been automatically resolved.`,
+          severity: AlertSeverity.INFO,
+        },
+      });
+    }
+  }
+
   async process(job: Job<{ serviceId: string }>): Promise<void> {
     const { serviceId } = job.data;
     this.logger.log(
@@ -130,6 +255,18 @@ export class HealthCheckProcessor extends WorkerHost {
         service.recoveryThreshold,
       );
 
+      if (
+        nextStatus === ServiceStatus.DOWN &&
+        service.status !== ServiceStatus.DOWN
+      ) {
+        await this.ensureIncidentCreated(
+          service,
+          CheckStatus.FAILURE,
+          null,
+          'Short-circuited: Circuit breaker is OPEN',
+        );
+      }
+
       // Update service status and increment failure counter
       await this.prisma.service.update({
         where: { id: service.id },
@@ -172,6 +309,8 @@ export class HealthCheckProcessor extends WorkerHost {
         circuitState === CircuitState.HALF_OPEN ? 1 : service.retryCount + 1;
       let finalStatus: CheckStatus = CheckStatus.FAILURE;
       let finalLatencyMs = 0;
+      let finalResponseCode: number | null = null;
+      let finalErrorMessage: string | null = null;
 
       while (attempt <= maxAttempts) {
         if (attempt > 1) {
@@ -188,6 +327,8 @@ export class HealthCheckProcessor extends WorkerHost {
 
         finalStatus = result.status;
         finalLatencyMs = result.responseTimeMs ?? 0;
+        finalResponseCode = result.responseCode ?? null;
+        finalErrorMessage = result.errorMessage ?? null;
 
         this.logger.log(
           `[Processor] Checked service "${service.name}" (attempt ${attempt}). Status: ${result.status}, Latency: ${result.responseTimeMs ?? 0}ms`,
@@ -233,6 +374,28 @@ export class HealthCheckProcessor extends WorkerHost {
         service.failureThreshold,
         service.recoveryThreshold,
       );
+
+      if (
+        nextStatus === ServiceStatus.DOWN &&
+        service.status !== ServiceStatus.DOWN
+      ) {
+        await this.ensureIncidentCreated(
+          service,
+          finalStatus,
+          finalResponseCode,
+          finalErrorMessage,
+        );
+      }
+
+      const recovered =
+        (nextStatus === ServiceStatus.HEALTHY ||
+          nextStatus === ServiceStatus.DEGRADED) &&
+        (service.status === ServiceStatus.DOWN ||
+          service.status === ServiceStatus.RECOVERING);
+
+      if (recovered) {
+        await this.ensureIncidentResolved(service);
+      }
 
       if (nextStatus !== service.status) {
         this.logger.log(
