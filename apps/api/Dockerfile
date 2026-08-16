@@ -22,6 +22,6 @@ RUN bun prisma generate
 RUN bun --filter api build
 
 # Expose backend API port
-EXPOSE 3000
+EXPOSE 8000
 
 CMD ["bun", "--filter", "api", "start:prod"]

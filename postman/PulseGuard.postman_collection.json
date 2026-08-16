@@ -205,11 +205,13 @@
               }
             },
             "url": {
-              "raw": "{{baseUrl}}/services",
+              "raw": "{{baseUrl}}/api/v1/services",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
+                "api",
+                "v1",
                 "services"
               ]
             }
@@ -232,11 +234,13 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/services",
+              "raw": "{{baseUrl}}/api/v1/services",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
+                "api",
+                "v1",
                 "services"
               ]
             }
@@ -259,11 +263,13 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/services/{{serviceId}}",
+              "raw": "{{baseUrl}}/api/v1/services/{{serviceId}}",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
+                "api",
+                "v1",
                 "services",
                 "{{serviceId}}"
               ]
@@ -302,11 +308,13 @@
               }
             },
             "url": {
-              "raw": "{{baseUrl}}/services/{{serviceId}}",
+              "raw": "{{baseUrl}}/api/v1/services/{{serviceId}}",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
+                "api",
+                "v1",
                 "services",
                 "{{serviceId}}"
               ]
@@ -330,11 +338,13 @@
             "method": "DELETE",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/services/{{serviceId}}",
+              "raw": "{{baseUrl}}/api/v1/services/{{serviceId}}",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
+                "api",
+                "v1",
                 "services",
                 "{{serviceId}}"
               ]
@@ -358,11 +368,13 @@
             "method": "POST",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/services/{{serviceId}}/enable",
+              "raw": "{{baseUrl}}/api/v1/services/{{serviceId}}/enable",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
+                "api",
+                "v1",
                 "services",
                 "{{serviceId}}",
                 "enable"
@@ -387,11 +399,13 @@
             "method": "POST",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/services/{{serviceId}}/disable",
+              "raw": "{{baseUrl}}/api/v1/services/{{serviceId}}/disable",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
+                "api",
+                "v1",
                 "services",
                 "{{serviceId}}",
                 "disable"
@@ -416,11 +430,13 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/services/{{serviceId}}/checks?limit=10&skip=0",
+              "raw": "{{baseUrl}}/api/v1/services/{{serviceId}}/checks?limit=10&skip=0",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
+                "api",
+                "v1",
                 "services",
                 "{{serviceId}}",
                 "checks"
@@ -455,11 +471,13 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/services/{{serviceId}}/metrics",
+              "raw": "{{baseUrl}}/api/v1/services/{{serviceId}}/metrics",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
+                "api",
+                "v1",
                 "services",
                 "{{serviceId}}",
                 "metrics"
@@ -489,11 +507,13 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/incidents?limit=50&skip=0&status=OPEN",
+              "raw": "{{baseUrl}}/api/v1/incidents?limit=50&skip=0&status=OPEN",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
+                "api",
+                "v1",
                 "incidents"
               ],
               "query": [
@@ -530,11 +550,13 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/incidents/:id",
+              "raw": "{{baseUrl}}/api/v1/incidents/:id",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
+                "api",
+                "v1",
                 "incidents",
                 ":id"
               ],
@@ -564,11 +586,13 @@
             "method": "POST",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/incidents/:id/acknowledge",
+              "raw": "{{baseUrl}}/api/v1/incidents/:id/acknowledge",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
+                "api",
+                "v1",
                 "incidents",
                 ":id",
                 "acknowledge"
@@ -599,11 +623,13 @@
             "method": "POST",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/incidents/:id/resolve",
+              "raw": "{{baseUrl}}/api/v1/incidents/:id/resolve",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
+                "api",
+                "v1",
                 "incidents",
                 ":id",
                 "resolve"
@@ -639,11 +665,13 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/alerts?limit=50&skip=0&severity=CRITICAL",
+              "raw": "{{baseUrl}}/api/v1/alerts?limit=50&skip=0&severity=CRITICAL",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
+                "api",
+                "v1",
                 "alerts"
               ],
               "query": [
@@ -680,11 +708,13 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/alerts/:id",
+              "raw": "{{baseUrl}}/api/v1/alerts/:id",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
+                "api",
+                "v1",
                 "alerts",
                 ":id"
               ],
@@ -719,11 +749,13 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/metrics/summary",
+              "raw": "{{baseUrl}}/api/v1/metrics/summary",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
+                "api",
+                "v1",
                 "metrics",
                 "summary"
               ]
@@ -737,11 +769,13 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/metrics",
+              "raw": "{{baseUrl}}/api/v1/metrics",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
+                "api",
+                "v1",
                 "metrics"
               ]
             }
@@ -769,11 +803,13 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/admin/users",
+              "raw": "{{baseUrl}}/api/v1/admin/users",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
+                "api",
+                "v1",
                 "admin",
                 "users"
               ]
@@ -812,11 +848,13 @@
               }
             },
             "url": {
-              "raw": "{{baseUrl}}/admin/users/:id/role",
+              "raw": "{{baseUrl}}/api/v1/admin/users/:id/role",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
+                "api",
+                "v1",
                 "admin",
                 "users",
                 ":id",
@@ -848,11 +886,13 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/admin/audit-logs?limit=50&skip=0",
+              "raw": "{{baseUrl}}/api/v1/admin/audit-logs?limit=50&skip=0",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
+                "api",
+                "v1",
                 "admin",
                 "audit-logs"
               ],
