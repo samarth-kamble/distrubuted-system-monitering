@@ -7,6 +7,10 @@ import { MONITOR_THRESHOLDS } from '@pulseguard/shared';
 import { PrismaService } from './prisma/prisma.service';
 import { HttpProberService } from './prober/http-prober.service';
 import { RedisLockService } from './prober/lock.service';
+import {
+  CircuitBreakerService,
+  CircuitState,
+} from './prober/circuit-breaker.service';
 
 @Processor('health-check')
 @Injectable()
@@ -17,6 +21,7 @@ export class HealthCheckProcessor extends WorkerHost {
     private readonly prisma: PrismaService,
     private readonly httpProber: HttpProberService,
     private readonly lockService: RedisLockService,
+    private readonly circuitBreakerService: CircuitBreakerService,
   ) {
     super();
   }
@@ -50,14 +55,12 @@ export class HealthCheckProcessor extends WorkerHost {
           : currentStatus;
       }
 
-      // If current is HEALTHY, transition to DEGRADED if it is slow
       if (currentStatus === ServiceStatus.HEALTHY && isSlow) {
         return ServiceStatus.DEGRADED;
       }
 
       return ServiceStatus.HEALTHY;
     } else {
-      // Failure
       if (nextFailures >= failureThreshold) {
         return ServiceStatus.DOWN;
       }
@@ -65,12 +68,9 @@ export class HealthCheckProcessor extends WorkerHost {
         currentStatus === ServiceStatus.HEALTHY ||
         currentStatus === ServiceStatus.DEGRADED
       ) {
-        // If failures < threshold, a healthy service goes to DEGRADED.
-        // A degraded service stays DEGRADED.
         return ServiceStatus.DEGRADED;
       }
       if (currentStatus === ServiceStatus.RECOVERING) {
-        // 1 Failure in RECOVERING trips it back to DOWN
         return ServiceStatus.DOWN;
       }
       return currentStatus;
@@ -101,6 +101,49 @@ export class HealthCheckProcessor extends WorkerHost {
       return;
     }
 
+    // Check circuit breaker status
+    const circuitState = await this.circuitBreakerService.getState(serviceId);
+    if (circuitState === CircuitState.OPEN) {
+      this.logger.warn(
+        `[Processor] Circuit breaker is OPEN for service "${service.name}" (${serviceId}). Short-circuiting health check.`,
+      );
+
+      // Save a failed check record representing the short-circuit
+      await this.prisma.serviceCheck.create({
+        data: {
+          serviceId: service.id,
+          status: CheckStatus.FAILURE,
+          responseTimeMs: 0,
+          errorMessage: 'Short-circuited: Circuit breaker is OPEN',
+          attemptNumber: 1,
+        },
+      });
+
+      const nextFailures = service.consecutiveFailures + 1;
+      const nextStatus = this.determineNextStatus(
+        service.status,
+        false, // isSuccess = false
+        0, // latency = 0
+        0, // nextSuccesses = 0
+        nextFailures,
+        service.failureThreshold,
+        service.recoveryThreshold,
+      );
+
+      // Update service status and increment failure counter
+      await this.prisma.service.update({
+        where: { id: service.id },
+        data: {
+          lastCheckedAt: new Date(),
+          consecutiveSuccesses: 0,
+          consecutiveFailures: nextFailures,
+          status: nextStatus,
+        },
+      });
+
+      return;
+    }
+
     const lockKey = `lock:service:${serviceId}`;
     const lockValue = crypto.randomUUID();
     const lockTtlMs = service.timeoutMs * 2;
@@ -119,12 +162,14 @@ export class HealthCheckProcessor extends WorkerHost {
     }
 
     this.logger.log(
-      `[Processor] [Heartbeat] Checking service "${service.name}" -> ${service.method} ${service.targetUrl}`,
+      `[Processor] [Heartbeat] Checking service "${service.name}" -> ${service.method} ${service.targetUrl} (Circuit: ${circuitState})`,
     );
 
     try {
       let attempt = 1;
-      const maxAttempts = service.retryCount + 1;
+      // In HALF_OPEN state, we only allow a single probe request (no retries) to test the server
+      const maxAttempts =
+        circuitState === CircuitState.HALF_OPEN ? 1 : service.retryCount + 1;
       let finalStatus: CheckStatus = CheckStatus.FAILURE;
       let finalLatencyMs = 0;
 
@@ -205,6 +250,40 @@ export class HealthCheckProcessor extends WorkerHost {
           status: nextStatus,
         },
       });
+
+      // Handle Circuit Breaker State Transitions
+      if (isSuccess) {
+        if (circuitState === CircuitState.HALF_OPEN) {
+          this.logger.log(
+            `[Processor] [CircuitBreaker] Service "${service.name}" succeeded in HALF_OPEN. Closing circuit.`,
+          );
+          await this.circuitBreakerService.transitionTo(
+            service.id,
+            CircuitState.CLOSED,
+          );
+        }
+      } else {
+        if (circuitState === CircuitState.HALF_OPEN) {
+          this.logger.warn(
+            `[Processor] [CircuitBreaker] Service "${service.name}" failed in HALF_OPEN. Re-opening circuit.`,
+          );
+          await this.circuitBreakerService.transitionTo(
+            service.id,
+            CircuitState.OPEN,
+          );
+        } else if (
+          circuitState === CircuitState.CLOSED &&
+          nextFailures >= service.failureThreshold
+        ) {
+          this.logger.warn(
+            `[Processor] [CircuitBreaker] Service "${service.name}" failed consecutive checks >= threshold (${service.failureThreshold}). Tripping circuit to OPEN.`,
+          );
+          await this.circuitBreakerService.transitionTo(
+            service.id,
+            CircuitState.OPEN,
+          );
+        }
+      }
     } catch (error: any) {
       this.logger.error(
         `[Processor] Failed to execute probe for service "${service.name}":`,
