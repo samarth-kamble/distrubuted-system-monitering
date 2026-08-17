@@ -40,6 +40,12 @@
   --font-mono: JetBrains Mono, monospace;
   --radius: 0.75rem;
   --shadow-x: 0px;
+  --card-glass: rgba(255, 255, 255, 0.75);
+  --border-glow: rgba(226, 41, 53, 0.22);
+  --text-glow: rgba(226, 41, 53, 0.35);
+  --radar-bg: rgba(0, 0, 0, 0.03);
+  --crosshair-color: rgba(226, 41, 53, 0.08);
+  --grid-line-color: rgba(226, 41, 53, 0.025);
   --shadow-y: 1px;
   --shadow-blur: 4px;
   --shadow-spread: 0px;
@@ -108,6 +114,12 @@
   --shadow-lg: 0px 1px 4px 0px hsl(0 0% 0% / 0.05), 0px 4px 6px -1px hsl(0 0% 0% / 0.05);
   --shadow-xl: 0px 1px 4px 0px hsl(0 0% 0% / 0.05), 0px 8px 10px -1px hsl(0 0% 0% / 0.05);
   --shadow-2xl: 0px 1px 4px 0px hsl(0 0% 0% / 0.13);
+  --card-glass: rgba(20, 20, 22, 0.65);
+  --border-glow: rgba(226, 41, 53, 0.2);
+  --text-glow: rgba(226, 41, 53, 0.75);
+  --radar-bg: rgba(0, 0, 0, 0.2);
+  --crosshair-color: rgba(226, 41, 53, 0.18);
+  --grid-line-color: rgba(226, 41, 53, 0.05);
 }
 
 @theme inline {
@@ -177,22 +189,5 @@
   body {
     @apply bg-background text-foreground;
     letter-spacing: var(--tracking-normal);
-  }
-}
-
-@keyframes radar-sweep {
-  0% {
-    left: 0%;
-    opacity: 0;
-  }
-  5% {
-    opacity: 0.6;
-  }
-  95% {
-    opacity: 0.6;
-  }
-  100% {
-    left: 100%;
-    opacity: 0;
   }
 }

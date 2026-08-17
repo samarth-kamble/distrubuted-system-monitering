@@ -32,6 +32,17 @@ export async function apiRequest<T>(endpoint: string, options: RequestOptions = 
   const response = await fetch(url, config);
   
   if (!response.ok) {
+    // If unauthorized (session expired or invalid token), clear credentials and force login redirect
+    if (response.status === 401) {
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("pulseguard_token");
+        localStorage.removeItem("pulseguard_user");
+        document.cookie = "pulseguard_token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT;";
+        window.location.href = "/login";
+        return {} as T;
+      }
+    }
+
     let errorMessage = "An error occurred while fetching the data.";
     try {
       const errorData = await response.json();
