@@ -16,7 +16,7 @@ export class CreateServiceDto {
   name: string;
 
   @IsUrl(
-    { protocols: ['http', 'https'], require_protocol: true },
+    { protocols: ['http', 'https'], require_protocol: true, require_tld: false },
     { message: 'targetUrl must be a valid HTTP or HTTPS URL address' },
   )
   targetUrl: string;

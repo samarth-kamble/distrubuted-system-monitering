@@ -41,7 +41,7 @@ export function useCreateService() {
     mutationFn: async (data: CreateServiceInput) => {
       return apiRequest<ServiceNode>("/api/v1/services", {
         method: "POST",
-        body: JSON.stringify(data),
+        body: data,
       })
     },
     onSuccess: () => {

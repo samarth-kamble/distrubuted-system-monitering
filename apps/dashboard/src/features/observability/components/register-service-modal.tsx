@@ -70,7 +70,7 @@ export function RegisterServiceModal({
               id="targetUrl"
               type="text"
               required
-              placeholder="e.g., https://api.pulseguard.io/health"
+              placeholder="https://api.github.com"
               value={formData.targetUrl}
               onChange={(e) =>
                 setFormData((prev) => ({ ...prev, targetUrl: e.target.value }))
@@ -94,7 +94,10 @@ export function RegisterServiceModal({
                 <option value="GET">GET</option>
                 <option value="POST">POST</option>
                 <option value="PUT">PUT</option>
+                <option value="PATCH">PATCH</option>
+                <option value="DELETE">DELETE</option>
                 <option value="HEAD">HEAD</option>
+                <option value="OPTIONS">OPTIONS</option>
               </select>
             </div>
 
@@ -104,8 +107,8 @@ export function RegisterServiceModal({
                 id="interval"
                 type="number"
                 required
-                min={5}
-                max={300}
+                min={10}
+                max={86400}
                 value={formData.intervalSeconds}
                 onChange={(e) =>
                   setFormData((prev) => ({
@@ -125,8 +128,8 @@ export function RegisterServiceModal({
               id="timeout"
               type="number"
               required
-              min={100}
-              max={15000}
+              min={500}
+              max={30000}
               value={formData.timeoutMs}
               onChange={(e) =>
                 setFormData((prev) => ({
