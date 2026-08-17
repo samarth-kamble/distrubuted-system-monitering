@@ -1,6 +1,6 @@
 "use client"
 
-import * as React from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { Shield, Sparkles, Cpu, HardDrive, Activity, Network } from "lucide-react"
@@ -8,9 +8,9 @@ import { ThemeToggle } from "@/components/theme-toggle"
 
 // Live rolling logs terminal mock
 function LiveTelemetryLogs() {
-  const [logs, setLogs] = React.useState<string[]>([])
+  const [logs, setLogs] = useState<string[]>([])
   
-  React.useEffect(() => {
+  useEffect(() => {
     const services = ["auth-service", "gateway-api", "postgres-replica", "redis-cache", "jobs-worker", "telemetry-agent"]
     const endpoints = ["/health", "/v2/metrics", "/auth/me", "/db/ping", "/ping", "/ssl/check"]
     

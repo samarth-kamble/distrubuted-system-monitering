@@ -1,6 +1,6 @@
 "use client"
 
-import * as React from "react"
+import { useState, FormEvent } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import {  Mail, Lock, Eye, EyeOff, Loader2, AlertCircle } from "lucide-react"
@@ -10,13 +10,13 @@ import { Label } from "@/components/ui/label"
 import { useLogin } from "../hooks/use-auth"
 
 export function LoginForm() {
-  const [email, setEmail] = React.useState("")
-  const [password, setPassword] = React.useState("")
-  const [showPassword, setShowPassword] = React.useState(false)
+  const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
+  const [showPassword, setShowPassword] = useState(false)
   
   const { mutate: login, isPending, error } = useLogin()
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e: FormEvent) => {
     e.preventDefault()
     login({ email, password })
   }
