@@ -6,7 +6,7 @@ import {
   Radio,
   Terminal,
   TrendingUp,
-  Shield,
+  AlertTriangle,
   Power,
   Search,
   Globe,
@@ -32,6 +32,7 @@ import { StatsRow } from "./stats-row";
 import { ServiceGrid } from "./service-grid";
 import { ServiceInspector } from "./service-inspector";
 import { LogsTerminal } from "./logs-terminal";
+import { IncidentsTimeline } from "./incidents-timeline";
 import { RegisterServiceModal } from "./register-service-modal";
 
 export interface LogItem {
@@ -59,7 +60,7 @@ export function ObservabilityConsole() {
   const [selectedNode, setSelectedNode] = useState<ServiceNode | null>(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
-  const [activeView, setActiveView] = useState<"nodes" | "logs">("nodes");
+  const [activeView, setActiveView] = useState<"nodes" | "logs" | "incidents">("nodes");
   const [liveLogs, setLiveLogs] = useState<LogItem[]>([]);
   const [isLogStreamPaused, setIsLogStreamPaused] = useState(false);
   const [logLevelFilter, setLogLevelFilter] = useState<
@@ -367,16 +368,22 @@ export function ObservabilityConsole() {
             </span>
           </button>
 
-          <a
-            className="flex flex-col items-center justify-center w-full py-3 text-muted-foreground/70 hover:text-foreground opacity-40 cursor-not-allowed"
-            href="#"
-            onClick={(e) => e.preventDefault()}
+          <button
+            onClick={() => {
+              setActiveView("incidents");
+              setIsMobileSidebarOpen(false);
+            }}
+            className={`flex flex-col items-center justify-center w-full py-3 transition-all cursor-pointer ${
+              activeView === "incidents"
+                ? "bg-primary/10 text-primary border-l-4 border-primary"
+                : "text-muted-foreground/70 hover:text-foreground"
+            }`}
           >
-            <Shield className="h-4.5 w-4.5 mb-1" />
+            <AlertTriangle className="h-4.5 w-4.5 mb-1" />
             <span className="font-mono text-[9px] uppercase tracking-tighter">
-              Security
+              Incidents
             </span>
-          </a>
+          </button>
         </div>
 
         <button
@@ -445,16 +452,19 @@ export function ObservabilityConsole() {
             </span>
           </button>
 
-          <a
-            className="flex flex-col items-center justify-center w-full py-3 text-muted-foreground/70 hover:text-foreground hover:bg-muted/50 transition-all group opacity-40 cursor-not-allowed"
-            href="#"
-            onClick={(e) => e.preventDefault()}
+          <button
+            onClick={() => setActiveView("incidents")}
+            className={`flex flex-col items-center justify-center w-full py-3 relative overflow-hidden group transition-all cursor-pointer ${
+              activeView === "incidents"
+                ? "bg-primary/10 text-primary border-l-4 border-primary"
+                : "text-muted-foreground/70 hover:text-foreground hover:bg-muted/50"
+            }`}
           >
-            <Shield className="h-4.5 w-4.5 mb-1" />
+            <AlertTriangle className="h-4.5 w-4.5 mb-1" />
             <span className="font-mono text-[9px] uppercase tracking-tighter">
-              Security
+              Incidents
             </span>
-          </a>
+          </button>
         </div>
 
         <button
@@ -615,7 +625,7 @@ export function ObservabilityConsole() {
                 </div>
               </div>
             </>
-          ) : (
+          ) : activeView === "logs" ? (
             /* Live Logs Terminal View */
             <LogsTerminal
               filteredLogs={filteredLogs}
@@ -626,6 +636,9 @@ export function ObservabilityConsole() {
               onClearLogs={() => setLiveLogs([])}
               logsEndRef={logsEndRef}
             />
+          ) : (
+            /* Incidents Timeline View */
+            <IncidentsTimeline />
           )}
         </main>
       </div>
