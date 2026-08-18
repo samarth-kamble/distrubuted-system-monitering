@@ -671,6 +671,7 @@ export function ObservabilityConsole() {
 
             {/* Notification Alerts Bell */}
             <button
+              onClick={() => setActiveView("alerts")}
               className="relative p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
               title="Alerts"
             >

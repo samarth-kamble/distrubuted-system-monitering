@@ -130,8 +130,10 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
         </header>
 
         {/* Scrollable Work View */}
-        <main className="flex-1 p-6 overflow-y-auto max-w-7xl w-full mx-auto">
-          {children}
+        <main className="flex-1 overflow-y-auto">
+          <div className="p-6 max-w-7xl w-full mx-auto">
+            {children}
+          </div>
         </main>
       </div>
     </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Users, Search, Plus, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -34,12 +34,26 @@ export function AdminUsersView() {
   const { mutate: updateRole } = useUpdateUserRole();
   const { mutate: createUser, isPending: isCreatingUser } = useCreateTenantUser();
 
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 8;
+
   // Search filter
   const filteredUsers = dbUsers.filter(
     (u) =>
       (u.name || "").toLowerCase().includes(userQuery.toLowerCase()) ||
       (u.email || "").toLowerCase().includes(userQuery.toLowerCase()),
   );
+
+  const totalPages = Math.ceil(filteredUsers.length / itemsPerPage);
+  const paginatedUsers = filteredUsers.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+
+  // Reset page when search query changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [userQuery]);
 
   const handleRoleChange = (id: string, newRole: string) => {
     updateRole(
@@ -152,7 +166,7 @@ export function AdminUsersView() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredUsers.map((u) => (
+              {paginatedUsers.map((u) => (
                 <TableRow
                   key={u.id}
                   className="border-b border-border/30 hover:bg-muted/10 transition-colors"
@@ -208,6 +222,38 @@ export function AdminUsersView() {
           </Table>
         )}
       </div>
+
+      {/* Pagination Controls */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between pt-4 border-t border-border/40 mt-4">
+          <span className="text-[11px] text-muted-foreground font-mono">
+            Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, filteredUsers.length)} of {filteredUsers.length} users
+          </span>
+          <div className="flex items-center gap-1.5">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+              disabled={currentPage === 1}
+              className="h-7 text-[10px] px-2.5 font-bold cursor-pointer"
+            >
+              Previous
+            </Button>
+            <div className="text-[10px] font-mono font-bold bg-muted px-2.5 py-1 rounded-md border border-border/40">
+              Page {currentPage} of {totalPages}
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+              disabled={currentPage === totalPages}
+              className="h-7 text-[10px] px-2.5 font-bold cursor-pointer"
+            >
+              Next
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* 🚀 Create User Modal Overlay */}
       {isCreateModalOpen && (

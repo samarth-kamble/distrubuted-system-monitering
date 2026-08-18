@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Bell,
   ShieldOff,
@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { useAlerts } from "../hooks/use-alerts";
 import type { Alert } from "../hooks/use-alerts";
+import { Button } from "@/components/ui/button";
 
 function timeAgo(dateStr: string): string {
   const diff = Date.now() - new Date(dateStr).getTime();
@@ -91,8 +92,21 @@ export function AlertsFeed() {
     typeFilter,
   );
 
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 8;
+  const totalPages = Math.ceil(alerts.length / itemsPerPage);
+  const paginatedAlerts = alerts.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+
+  // Reset page when filter changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [severityFilter, typeFilter]);
+
   return (
-    <div className="bg-card border border-border/50 rounded-xl p-5 flex flex-col space-y-4 shadow-2xs h-[calc(100vh-140px)]">
+    <div className="bg-card border border-border/50 rounded-xl p-5 flex flex-col space-y-4 shadow-2xs">
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-border/40 pb-4">
         <div>
@@ -138,20 +152,20 @@ export function AlertsFeed() {
       </div>
 
       {/* Alerts List */}
-      <div className="flex-1 overflow-y-auto pr-1 space-y-3">
+      <div className="space-y-3">
         {isLoading ? (
-          <div className="flex flex-col items-center justify-center h-full gap-3">
+          <div className="flex flex-col items-center justify-center py-12 gap-3">
             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             <p className="text-xs text-muted-foreground">Loading alerts...</p>
           </div>
         ) : alerts.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full gap-3 text-center">
-            <div className="h-14 w-14 rounded-2xl bg-muted/60 flex items-center justify-center">
+          <div className="flex flex-col items-center justify-center py-12 gap-3 text-center">
+            <div className="h-14 w-14 rounded-2xl bg-muted/60 flex items-center justify-center mx-auto">
               <BellOff className="h-7 w-7 text-muted-foreground/50" />
             </div>
             <div>
               <p className="text-sm font-semibold text-foreground">No alerts</p>
-              <p className="text-[11px] text-muted-foreground mt-1 max-w-xs">
+              <p className="text-[11px] text-muted-foreground mt-1 max-w-xs mx-auto">
                 No alerts found
                 {severityFilter !== "ALL" || typeFilter !== "ALL"
                   ? " matching your filters"
@@ -161,72 +175,106 @@ export function AlertsFeed() {
             </div>
           </div>
         ) : (
-          alerts.map((alert) => {
-            const severity = SEVERITY_COLORS[alert.severity];
-            const Icon = TYPE_ICONS[alert.type] || Bell;
-            const typeLabel = TYPE_LABELS[alert.type] || alert.type;
+          <>
+            {paginatedAlerts.map((alert) => {
+              const severity = SEVERITY_COLORS[alert.severity];
+              const Icon = TYPE_ICONS[alert.type] || Bell;
+              const typeLabel = TYPE_LABELS[alert.type] || alert.type;
 
-            return (
-              <div
-                key={alert.id}
-                className="flex overflow-hidden rounded-xl border border-border/50 bg-card shadow-2xs hover:shadow-xs transition-all"
-              >
-                {/* Severity Color Strip */}
-                <div className={`w-1 shrink-0 ${severity.strip}`} />
+              return (
+                <div
+                  key={alert.id}
+                  className="flex overflow-hidden rounded-xl border border-border/50 bg-card shadow-2xs hover:shadow-xs transition-all"
+                >
+                  {/* Severity Color Strip */}
+                  <div className={`w-1 shrink-0 ${severity.strip}`} />
 
-                {/* Card Content */}
-                <div className="flex-1 p-4">
-                  {/* Top Row */}
-                  <div className="flex items-start justify-between gap-3 mb-2">
-                    <div className="flex items-center gap-2.5">
-                      <div
-                        className={`h-7 w-7 rounded-lg ${severity.bg} flex items-center justify-center shrink-0`}
-                      >
-                        <Icon className={`h-3.5 w-3.5 ${severity.text}`} />
+                  {/* Card Content */}
+                  <div className="flex-1 p-4">
+                    {/* Top Row */}
+                    <div className="flex items-start justify-between gap-3 mb-2">
+                      <div className="flex items-center gap-2.5">
+                        <div
+                          className={`h-7 w-7 rounded-lg ${severity.bg} flex items-center justify-center shrink-0`}
+                        >
+                          <Icon className={`h-3.5 w-3.5 ${severity.text}`} />
+                        </div>
+                        <div>
+                          <h4 className="text-xs font-bold text-foreground leading-tight">
+                            {alert.title}
+                          </h4>
+                          <p className="text-[10px] text-muted-foreground mt-0.5">
+                            {alert.service.name}
+                          </p>
+                        </div>
                       </div>
-                      <div>
-                        <h4 className="text-xs font-bold text-foreground leading-tight">
-                          {alert.title}
-                        </h4>
-                        <p className="text-[10px] text-muted-foreground mt-0.5">
-                          {alert.service.name}
-                        </p>
+
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span
+                          className={`inline-flex items-center text-[8px] font-bold px-1.5 py-0.5 rounded-full border ${severity.bg} ${severity.text} ${severity.border} uppercase tracking-wider`}
+                        >
+                          {alert.severity}
+                        </span>
+                        <span className="text-[10px] text-muted-foreground/60 font-mono whitespace-nowrap">
+                          {timeAgo(alert.createdAt)}
+                        </span>
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-2 shrink-0">
-                      <span
-                        className={`inline-flex items-center text-[8px] font-bold px-1.5 py-0.5 rounded-full border ${severity.bg} ${severity.text} ${severity.border} uppercase tracking-wider`}
-                      >
-                        {alert.severity}
+                    {/* Message */}
+                    <p className="text-[11px] text-muted-foreground leading-relaxed mb-2">
+                      {alert.message}
+                    </p>
+
+                    {/* Footer Tags */}
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="inline-flex items-center gap-1 text-[9px] font-medium text-muted-foreground/70 bg-muted/50 px-2 py-0.5 rounded-md">
+                        <Icon className="h-2.5 w-2.5" />
+                        {typeLabel}
                       </span>
-                      <span className="text-[10px] text-muted-foreground/60 font-mono whitespace-nowrap">
-                        {timeAgo(alert.createdAt)}
-                      </span>
+                      {alert.incidentId && (
+                        <span className="text-[9px] font-mono text-muted-foreground/50 bg-muted/50 px-2 py-0.5 rounded-md">
+                          INC:{alert.incidentId.slice(0, 8)}
+                        </span>
+                      )}
                     </div>
-                  </div>
-
-                  {/* Message */}
-                  <p className="text-[11px] text-muted-foreground leading-relaxed mb-2">
-                    {alert.message}
-                  </p>
-
-                  {/* Footer Tags */}
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="inline-flex items-center gap-1 text-[9px] font-medium text-muted-foreground/70 bg-muted/50 px-2 py-0.5 rounded-md">
-                      <Icon className="h-2.5 w-2.5" />
-                      {typeLabel}
-                    </span>
-                    {alert.incidentId && (
-                      <span className="text-[9px] font-mono text-muted-foreground/50 bg-muted/50 px-2 py-0.5 rounded-md">
-                        INC:{alert.incidentId.slice(0, 8)}
-                      </span>
-                    )}
                   </div>
                 </div>
+              );
+            })}
+
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between pt-4 border-t border-border/40 mt-4">
+                <span className="text-[11px] text-muted-foreground font-mono">
+                  Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, alerts.length)} of {alerts.length} alerts
+                </span>
+                <div className="flex items-center gap-1.5">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                    disabled={currentPage === 1}
+                    className="h-7 text-[10px] px-2.5 font-bold cursor-pointer"
+                  >
+                    Previous
+                  </Button>
+                  <div className="text-[10px] font-mono font-bold bg-muted px-2.5 py-1 rounded-md border border-border/40">
+                    Page {currentPage} of {totalPages}
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                    disabled={currentPage === totalPages}
+                    className="h-7 text-[10px] px-2.5 font-bold cursor-pointer"
+                  >
+                    Next
+                  </Button>
+                </div>
               </div>
-            );
-          })
+            )}
+          </>
         )}
       </div>
     </div>

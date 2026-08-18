@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   AlertTriangle,
   Clock,
@@ -28,71 +28,35 @@ function timeAgo(dateStr: string): string {
   return `${days}d ago`;
 }
 
-function durationStr(startedAt: string, resolvedAt: string | null): string {
-  const end = resolvedAt ? new Date(resolvedAt).getTime() : Date.now();
-  const diff = end - new Date(startedAt).getTime();
-  const minutes = Math.floor(diff / 60000);
-  if (minutes < 60) return `${minutes}m`;
-  const hours = Math.floor(minutes / 60);
-  const remainMins = minutes % 60;
-  if (hours < 24) return `${hours}h ${remainMins}m`;
-  const days = Math.floor(hours / 24);
-  return `${days}d ${hours % 24}h`;
+function durationStr(start: string, end: string | null): string {
+  const startTime = new Date(start).getTime();
+  const endTime = end ? new Date(end).getTime() : Date.now();
+  const diff = endTime - startTime;
+  const mins = Math.floor(diff / 60000);
+  if (mins < 60) return `${mins}m`;
+  const hrs = Math.floor(mins / 60);
+  const remainingMins = mins % 60;
+  return `${hrs}h ${remainingMins}m`;
 }
-
-const SEVERITY_CONFIG = {
-  CRITICAL: {
-    bg: "bg-rose-500/10",
-    text: "text-rose-500",
-    border: "border-rose-500/20",
-    dot: "bg-rose-500 animate-pulse",
-  },
-  HIGH: {
-    bg: "bg-orange-500/10",
-    text: "text-orange-500",
-    border: "border-orange-500/20",
-    dot: "bg-orange-500",
-  },
-  MEDIUM: {
-    bg: "bg-amber-500/10",
-    text: "text-amber-500",
-    border: "border-amber-500/20",
-    dot: "bg-amber-500",
-  },
-  LOW: {
-    bg: "bg-blue-500/10",
-    text: "text-blue-500",
-    border: "border-blue-500/20",
-    dot: "bg-blue-500",
-  },
-};
-
-const STATUS_CONFIG = {
-  OPEN: {
-    bg: "bg-rose-500/10",
-    text: "text-rose-500",
-    border: "border-rose-500/20",
-    label: "Open",
-  },
-  ACKNOWLEDGED: {
-    bg: "bg-amber-500/10",
-    text: "text-amber-500",
-    border: "border-amber-500/20",
-    label: "Acknowledged",
-  },
-  RESOLVED: {
-    bg: "bg-emerald-500/10",
-    text: "text-emerald-500",
-    border: "border-emerald-500/20",
-    label: "Resolved",
-  },
-};
 
 export function IncidentsTimeline() {
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
   const { data: incidents = [], isLoading } = useIncidents(statusFilter);
   const { mutate: acknowledge, isPending: isAcking } = useAcknowledgeIncident();
   const { mutate: resolve, isPending: isResolving } = useResolveIncident();
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 6;
+  const totalPages = Math.ceil(incidents.length / itemsPerPage);
+  const paginatedIncidents = incidents.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+
+  // Reset page when filter changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [statusFilter]);
 
   const handleAcknowledge = (incident: Incident) => {
     acknowledge(incident.id, {
@@ -115,7 +79,7 @@ export function IncidentsTimeline() {
   };
 
   return (
-    <div className="bg-card border border-border/50 rounded-xl p-5 flex flex-col space-y-4 shadow-2xs h-[calc(100vh-140px)]">
+    <div className="bg-card border border-border/50 rounded-xl p-5 flex flex-col space-y-4 shadow-2xs">
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-border/40 pb-4">
         <div>
@@ -143,146 +107,173 @@ export function IncidentsTimeline() {
       </div>
 
       {/* Timeline Content */}
-      <div className="flex-1 overflow-y-auto pr-1 space-y-0">
+      <div className="space-y-4">
         {isLoading ? (
-          <div className="flex flex-col items-center justify-center h-full gap-3">
+          <div className="flex flex-col items-center justify-center py-12 gap-3">
             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             <p className="text-xs text-muted-foreground">
               Loading incidents...
             </p>
           </div>
         ) : incidents.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full gap-3 text-center">
-            <div className="h-14 w-14 rounded-2xl bg-emerald-500/10 flex items-center justify-center">
+          <div className="flex flex-col items-center justify-center py-12 gap-3 text-center">
+            <div className="h-14 w-14 rounded-2xl bg-emerald-500/10 flex items-center justify-center mx-auto">
               <ShieldCheck className="h-7 w-7 text-emerald-500" />
             </div>
             <div>
               <p className="text-sm font-semibold text-foreground">
-                All clear!
+                All Systems Operational
               </p>
-              <p className="text-[11px] text-muted-foreground mt-1 max-w-xs">
-                No incidents found
-                {statusFilter !== "ALL" ? ` with status "${statusFilter}"` : ""}
-                . Your services are running smoothly.
+              <p className="text-[11px] text-muted-foreground mt-1 max-w-xs mx-auto">
+                No incidents recorded
+                {statusFilter !== "ALL" ? " matching your filter" : ""}.
               </p>
             </div>
           </div>
         ) : (
-          /* Timeline Items */
-          incidents.map((incident, index) => {
-            const severity = SEVERITY_CONFIG[incident.severity];
-            const status = STATUS_CONFIG[incident.status];
-            const isLast = index === incidents.length - 1;
+          <>
+            {paginatedIncidents.map((incident, index) => {
+              const isLast = index === paginatedIncidents.length - 1;
 
-            return (
-              <div key={incident.id} className="flex gap-4">
-                {/* Timeline Rail */}
-                <div className="flex flex-col items-center pt-1">
-                  <div
-                    className={`h-3 w-3 rounded-full ${severity.dot} ring-4 ring-background shrink-0 z-10`}
-                  />
+              return (
+                <div key={incident.id} className="relative flex gap-4">
+                  {/* Timeline Node Connector Line */}
                   {!isLast && (
-                    <div className="w-px flex-1 bg-border/60 min-h-6" />
+                    <span className="absolute left-[13px] top-7 bottom-0 w-0.5 bg-border/40" />
                   )}
-                </div>
 
-                {/* Incident Card */}
-                <div
-                  className={`flex-1 mb-4 bg-card border rounded-xl p-4 shadow-2xs hover:shadow-xs transition-all ${
-                    incident.status === "OPEN"
-                      ? "border-rose-500/30"
-                      : incident.status === "ACKNOWLEDGED"
-                        ? "border-amber-500/30"
-                        : "border-border/50"
-                  }`}
-                >
-                  {/* Top Row: Service + Badges */}
-                  <div className="flex flex-wrap items-center gap-2 mb-2">
-                    <h4 className="text-xs font-bold text-foreground">
-                      {incident.service.name}
-                    </h4>
-
-                    <span
-                      className={`inline-flex items-center gap-1 text-[9px] font-semibold px-2 py-0.5 rounded-full border ${severity.bg} ${severity.text} ${severity.border}`}
-                    >
-                      {incident.severity}
-                    </span>
-
-                    <span
-                      className={`inline-flex items-center gap-1 text-[9px] font-semibold px-2 py-0.5 rounded-full border ${status.bg} ${status.text} ${status.border}`}
-                    >
-                      {status.label}
-                    </span>
+                  {/* Severity Indicator Node */}
+                  <div
+                    className={`h-7 w-7 rounded-full shrink-0 flex items-center justify-center border z-10 ${
+                      incident.status === "RESOLVED"
+                        ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-500"
+                        : incident.status === "ACKNOWLEDGED"
+                        ? "bg-amber-500/10 border-amber-500/30 text-amber-500"
+                        : "bg-rose-500/10 border-rose-500/30 text-rose-500 animate-pulse"
+                    }`}
+                  >
+                    <AlertTriangle className="h-3.5 w-3.5" />
                   </div>
 
-                  {/* Reason */}
-                  <p className="text-[11px] text-muted-foreground leading-relaxed mb-3">
-                    {incident.reason}
-                  </p>
+                  {/* Incident Details Card */}
+                  <div className="flex-1 bg-muted/20 border border-border/40 rounded-xl p-4 space-y-3">
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h4 className="text-xs font-bold text-foreground">
+                            Outage: {incident.severity} Severity
+                          </h4>
+                          <span
+                            className={`text-[8px] font-bold px-2 py-0.5 rounded-full border tracking-wide uppercase ${
+                              incident.status === "RESOLVED"
+                                ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20"
+                                : incident.status === "ACKNOWLEDGED"
+                                ? "bg-amber-500/10 text-amber-500 border-amber-500/20"
+                                : "bg-rose-500/10 text-rose-500 border-rose-500/20"
+                            }`}
+                          >
+                            {incident.status}
+                          </span>
+                        </div>
+                        <p className="text-[10px] text-muted-foreground mt-0.5 font-mono">
+                          Service: {incident.service.name} (
+                          {incident.service.targetUrl})
+                        </p>
+                      </div>
 
-                  {/* Timestamps */}
-                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[10px] text-muted-foreground mb-3">
-                    <span className="flex items-center gap-1">
-                      <Clock className="h-3 w-3" />
-                      Started {timeAgo(incident.startedAt)}
-                    </span>
-                    {incident.acknowledgedAt && (
-                      <span className="flex items-center gap-1">
-                        <Eye className="h-3 w-3" />
-                        Ack&apos;d {timeAgo(incident.acknowledgedAt)}
+                      <span className="text-[10px] text-muted-foreground/60 font-mono">
+                        {timeAgo(incident.startedAt)}
                       </span>
-                    )}
-                    {incident.resolvedAt && (
-                      <span className="flex items-center gap-1">
-                        <CheckCircle2 className="h-3 w-3" />
-                        Resolved {timeAgo(incident.resolvedAt)}
-                      </span>
-                    )}
-                    <span className="font-mono text-muted-foreground/60">
-                      Duration:{" "}
-                      {durationStr(incident.startedAt, incident.resolvedAt)}
-                    </span>
-                  </div>
+                    </div>
 
-                  {/* Actions */}
-                  {incident.status !== "RESOLVED" && (
-                    <div className="flex items-center gap-2 pt-2 border-t border-border/30">
-                      {incident.status === "OPEN" && (
+                    <p className="text-[11px] text-muted-foreground leading-normal font-sans">
+                      {incident.reason}
+                    </p>
+
+                    <div className="flex items-center justify-between text-[9px] font-mono border-t border-border/30 pt-2 gap-2 flex-wrap">
+                      {incident.resolvedAt && (
+                        <span className="text-muted-foreground/50">
+                          Resolved: {new Date(incident.resolvedAt).toLocaleString()}
+                        </span>
+                      )}
+                      <span className="font-mono text-muted-foreground/60">
+                        Duration:{" "}
+                        {durationStr(incident.startedAt, incident.resolvedAt)}
+                      </span>
+                    </div>
+
+                    {/* Actions */}
+                    {incident.status !== "RESOLVED" && (
+                      <div className="flex items-center gap-2 pt-2 border-t border-border/30">
+                        {incident.status === "OPEN" && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="text-[10px] h-7 font-semibold cursor-pointer bg-amber-500/5 text-amber-600 dark:text-amber-400 border-amber-500/20 hover:bg-amber-500/15"
+                            onClick={() => handleAcknowledge(incident)}
+                            disabled={isAcking}
+                          >
+                            {isAcking ? (
+                              <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                            ) : (
+                              <Eye className="h-3 w-3 mr-1" />
+                            )}
+                            Acknowledge
+                          </Button>
+                        )}
                         <Button
                           variant="outline"
                           size="sm"
-                          className="text-[10px] h-7 font-semibold cursor-pointer bg-amber-500/5 text-amber-600 dark:text-amber-400 border-amber-500/20 hover:bg-amber-500/15"
-                          onClick={() => handleAcknowledge(incident)}
-                          disabled={isAcking}
+                          className="text-[10px] h-7 font-semibold cursor-pointer bg-emerald-500/5 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/15"
+                          onClick={() => handleResolve(incident)}
+                          disabled={isResolving}
                         >
-                          {isAcking ? (
+                          {isResolving ? (
                             <Loader2 className="h-3 w-3 animate-spin mr-1" />
                           ) : (
-                            <Eye className="h-3 w-3 mr-1" />
+                            <CheckCircle2 className="h-3 w-3 mr-1" />
                           )}
-                          Acknowledge
+                          Resolve
                         </Button>
-                      )}
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="text-[10px] h-7 font-semibold cursor-pointer bg-emerald-500/5 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/15"
-                        onClick={() => handleResolve(incident)}
-                        disabled={isResolving}
-                      >
-                        {isResolving ? (
-                          <Loader2 className="h-3 w-3 animate-spin mr-1" />
-                        ) : (
-                          <CheckCircle2 className="h-3 w-3 mr-1" />
-                        )}
-                        Resolve
-                      </Button>
-                    </div>
-                  )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between pt-4 border-t border-border/40 mt-4">
+                <span className="text-[11px] text-muted-foreground font-mono">
+                  Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, incidents.length)} of {incidents.length} incidents
+                </span>
+                <div className="flex items-center gap-1.5">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                    disabled={currentPage === 1}
+                    className="h-7 text-[10px] px-2.5 font-bold cursor-pointer"
+                  >
+                    Previous
+                  </Button>
+                  <div className="text-[10px] font-mono font-bold bg-muted px-2.5 py-1 rounded-md border border-border/40">
+                    Page {currentPage} of {totalPages}
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                    disabled={currentPage === totalPages}
+                    className="h-7 text-[10px] px-2.5 font-bold cursor-pointer"
+                  >
+                    Next
+                  </Button>
                 </div>
               </div>
-            );
-          })
+            )}
+          </>
         )}
       </div>
     </div>
