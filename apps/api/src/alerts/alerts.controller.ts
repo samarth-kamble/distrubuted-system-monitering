@@ -18,6 +18,7 @@ interface RequestWithUser extends ExpressRequest {
     id: string;
     email: string;
     role: UserRole;
+    tenantId: string | null;
   };
 }
 
@@ -27,7 +28,7 @@ export class AlertsController {
   constructor(private readonly alertsService: AlertsService) {}
 
   @Get()
-  @Roles(UserRole.ADMIN, UserRole.OPERATOR, UserRole.VIEWER)
+  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.OPERATOR, UserRole.VIEWER)
   findAll(
     @Request() req: RequestWithUser,
     @Query('limit') limit?: string,
@@ -40,6 +41,7 @@ export class AlertsController {
     const parsedSkip = skip ? parseInt(skip, 10) : undefined;
     return this.alertsService.findAll(
       req.user.id,
+      req.user.tenantId,
       req.user.role,
       parsedLimit,
       parsedSkip,
@@ -50,8 +52,8 @@ export class AlertsController {
   }
 
   @Get(':id')
-  @Roles(UserRole.ADMIN, UserRole.OPERATOR, UserRole.VIEWER)
+  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.OPERATOR, UserRole.VIEWER)
   findOne(@Request() req: RequestWithUser, @Param('id') id: string) {
-    return this.alertsService.findOne(req.user.id, req.user.role, id);
+    return this.alertsService.findOne(req.user.id, req.user.tenantId, req.user.role, id);
   }
 }

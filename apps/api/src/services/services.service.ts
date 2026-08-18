@@ -12,28 +12,39 @@ import { UserRole } from '@prisma/client';
 export class ServicesService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async create(userId: string, dto: CreateServiceDto) {
+  async create(userId: string, tenantId: string | null, dto: CreateServiceDto) {
     return this.prisma.service.create({
       data: {
         ...dto,
         userId,
+        tenantId,
       },
     });
   }
 
-  async findAll(userId: string, userRole: UserRole) {
-    if (userRole === UserRole.ADMIN || userRole === UserRole.OPERATOR) {
+  async findAll(userId: string, tenantId: string | null, userRole: UserRole) {
+    if (userRole === UserRole.SUPER_ADMIN) {
       return this.prisma.service.findMany({
         orderBy: { createdAt: 'desc' },
       });
     }
+    
+    // Admins and Operators can view all tenant-scoped services
+    if ((userRole === UserRole.ADMIN || userRole === UserRole.OPERATOR) && tenantId) {
+      return this.prisma.service.findMany({
+        where: { tenantId },
+        orderBy: { createdAt: 'desc' },
+      });
+    }
+
+    // Viewers/Others only see services matching their tenantId and userId if no tenant
     return this.prisma.service.findMany({
-      where: { userId },
+      where: tenantId ? { tenantId } : { userId },
       orderBy: { createdAt: 'desc' },
     });
   }
 
-  async findOne(userId: string, userRole: UserRole, id: string) {
+  async findOne(userId: string, tenantId: string | null, userRole: UserRole, id: string) {
     const service = await this.prisma.service.findUnique({
       where: { id },
     });
@@ -42,11 +53,17 @@ export class ServicesService {
       throw new NotFoundException(`Service with ID ${id} not found`);
     }
 
-    if (
-      userRole !== UserRole.ADMIN &&
-      userRole !== UserRole.OPERATOR &&
-      service.userId !== userId
-    ) {
+    // Bypass check for Platform Super Admins
+    if (userRole === UserRole.SUPER_ADMIN) {
+      return service;
+    }
+
+    // Validate tenant ownership or user ownership fallback
+    const isOwner = tenantId 
+      ? service.tenantId === tenantId
+      : service.userId === userId;
+
+    if (!isOwner) {
       throw new ForbiddenException(
         'You do not have permission to access this service',
       );
@@ -57,11 +74,12 @@ export class ServicesService {
 
   async update(
     userId: string,
+    tenantId: string | null,
     userRole: UserRole,
     id: string,
     dto: UpdateServiceDto,
   ) {
-    await this.findOne(userId, userRole, id);
+    await this.findOne(userId, tenantId, userRole, id);
 
     return this.prisma.service.update({
       where: { id },
@@ -69,16 +87,16 @@ export class ServicesService {
     });
   }
 
-  async remove(userId: string, userRole: UserRole, id: string) {
-    await this.findOne(userId, userRole, id);
+  async remove(userId: string, tenantId: string | null, userRole: UserRole, id: string) {
+    await this.findOne(userId, tenantId, userRole, id);
 
     return this.prisma.service.delete({
       where: { id },
     });
   }
 
-  async enable(userId: string, userRole: UserRole, id: string) {
-    await this.findOne(userId, userRole, id);
+  async enable(userId: string, tenantId: string | null, userRole: UserRole, id: string) {
+    await this.findOne(userId, tenantId, userRole, id);
 
     return this.prisma.service.update({
       where: { id },
@@ -86,8 +104,8 @@ export class ServicesService {
     });
   }
 
-  async disable(userId: string, userRole: UserRole, id: string) {
-    await this.findOne(userId, userRole, id);
+  async disable(userId: string, tenantId: string | null, userRole: UserRole, id: string) {
+    await this.findOne(userId, tenantId, userRole, id);
 
     return this.prisma.service.update({
       where: { id },
@@ -97,12 +115,13 @@ export class ServicesService {
 
   async findChecks(
     userId: string,
+    tenantId: string | null,
     userRole: UserRole,
     id: string,
     limit = 50,
     skip = 0,
   ) {
-    await this.findOne(userId, userRole, id);
+    await this.findOne(userId, tenantId, userRole, id);
 
     return this.prisma.serviceCheck.findMany({
       where: { serviceId: id },
@@ -112,8 +131,8 @@ export class ServicesService {
     });
   }
 
-  async getMetrics(userId: string, userRole: UserRole, id: string) {
-    const service = await this.findOne(userId, userRole, id);
+  async getMetrics(userId: string, tenantId: string | null, userRole: UserRole, id: string) {
+    const service = await this.findOne(userId, tenantId, userRole, id);
 
     // 1. Success/Failure counts
     const totalChecks = await this.prisma.serviceCheck.count({

@@ -11,6 +11,7 @@ interface RequestWithUser extends ExpressRequest {
     id: string;
     email: string;
     role: UserRole;
+    tenantId: string | null;
   };
 }
 
@@ -26,8 +27,8 @@ export class MetricsController {
 
   @Get('summary')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN, UserRole.OPERATOR, UserRole.VIEWER)
+  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.OPERATOR, UserRole.VIEWER)
   async getSummary(@Request() req: RequestWithUser) {
-    return this.metricsService.getSummary(req.user.id, req.user.role);
+    return this.metricsService.getSummary(req.user.id, req.user.tenantId, req.user.role);
   }
 }

@@ -25,6 +25,7 @@ interface RequestWithUser extends ExpressRequest {
     id: string;
     email: string;
     role: UserRole;
+    tenantId: string | null;
   };
 }
 
@@ -34,58 +35,58 @@ export class ServicesController {
   constructor(private readonly servicesService: ServicesService) {}
 
   @Post()
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
   @Audit({ action: 'create', resource: 'service', resourceIdParam: 'id' })
   create(@Request() req: RequestWithUser, @Body() dto: CreateServiceDto) {
-    return this.servicesService.create(req.user.id, dto);
+    return this.servicesService.create(req.user.id, req.user.tenantId, dto);
   }
 
   @Get()
-  @Roles(UserRole.ADMIN, UserRole.OPERATOR, UserRole.VIEWER)
+  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.OPERATOR, UserRole.VIEWER)
   findAll(@Request() req: RequestWithUser) {
-    return this.servicesService.findAll(req.user.id, req.user.role);
+    return this.servicesService.findAll(req.user.id, req.user.tenantId, req.user.role);
   }
 
   @Get(':id')
-  @Roles(UserRole.ADMIN, UserRole.OPERATOR, UserRole.VIEWER)
+  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.OPERATOR, UserRole.VIEWER)
   findOne(@Request() req: RequestWithUser, @Param('id') id: string) {
-    return this.servicesService.findOne(req.user.id, req.user.role, id);
+    return this.servicesService.findOne(req.user.id, req.user.tenantId, req.user.role, id);
   }
 
   @Patch(':id')
-  @Roles(UserRole.ADMIN, UserRole.OPERATOR)
+  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.OPERATOR)
   @Audit({ action: 'update', resource: 'service', resourceIdParam: 'id' })
   update(
     @Request() req: RequestWithUser,
     @Param('id') id: string,
     @Body() dto: UpdateServiceDto,
   ) {
-    return this.servicesService.update(req.user.id, req.user.role, id, dto);
+    return this.servicesService.update(req.user.id, req.user.tenantId, req.user.role, id, dto);
   }
 
   @Delete(':id')
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
   @Audit({ action: 'delete', resource: 'service', resourceIdParam: 'id' })
   remove(@Request() req: RequestWithUser, @Param('id') id: string) {
-    return this.servicesService.remove(req.user.id, req.user.role, id);
+    return this.servicesService.remove(req.user.id, req.user.tenantId, req.user.role, id);
   }
 
   @Post(':id/enable')
-  @Roles(UserRole.ADMIN, UserRole.OPERATOR)
+  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.OPERATOR)
   @Audit({ action: 'enable', resource: 'service', resourceIdParam: 'id' })
   enable(@Request() req: RequestWithUser, @Param('id') id: string) {
-    return this.servicesService.enable(req.user.id, req.user.role, id);
+    return this.servicesService.enable(req.user.id, req.user.tenantId, req.user.role, id);
   }
 
   @Post(':id/disable')
-  @Roles(UserRole.ADMIN, UserRole.OPERATOR)
+  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.OPERATOR)
   @Audit({ action: 'disable', resource: 'service', resourceIdParam: 'id' })
   disable(@Request() req: RequestWithUser, @Param('id') id: string) {
-    return this.servicesService.disable(req.user.id, req.user.role, id);
+    return this.servicesService.disable(req.user.id, req.user.tenantId, req.user.role, id);
   }
 
   @Get(':id/checks')
-  @Roles(UserRole.ADMIN, UserRole.OPERATOR, UserRole.VIEWER)
+  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.OPERATOR, UserRole.VIEWER)
   findChecks(
     @Request() req: RequestWithUser,
     @Param('id') id: string,
@@ -96,6 +97,7 @@ export class ServicesController {
     const parsedSkip = skip ? parseInt(skip, 10) : undefined;
     return this.servicesService.findChecks(
       req.user.id,
+      req.user.tenantId,
       req.user.role,
       id,
       parsedLimit,
@@ -104,8 +106,8 @@ export class ServicesController {
   }
 
   @Get(':id/metrics')
-  @Roles(UserRole.ADMIN, UserRole.OPERATOR, UserRole.VIEWER)
+  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.OPERATOR, UserRole.VIEWER)
   getMetrics(@Request() req: RequestWithUser, @Param('id') id: string) {
-    return this.servicesService.getMetrics(req.user.id, req.user.role, id);
+    return this.servicesService.getMetrics(req.user.id, req.user.tenantId, req.user.role, id);
   }
 }

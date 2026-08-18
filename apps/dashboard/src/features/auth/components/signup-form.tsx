@@ -3,7 +3,7 @@
 import { useState, FormEvent } from "react"
 import Link from "next/link"
 import Image from "next/image"
-import { Shield, Mail, Lock, User, Eye, EyeOff, Loader2, AlertCircle } from "lucide-react"
+import { Shield, Mail, Lock, User, Eye, EyeOff, Loader2, AlertCircle, Building2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -12,6 +12,7 @@ import { useSignup } from "../hooks/use-auth"
 export function SignupForm() {
   const [name, setName] = useState("")
   const [email, setEmail] = useState("")
+  const [organizationName, setOrganizationName] = useState("")
   const [password, setPassword] = useState("")
   const [showPassword, setShowPassword] = useState(false)
 
@@ -19,7 +20,7 @@ export function SignupForm() {
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault()
-    signup({ name, email, password })
+    signup({ name, email, password, organizationName })
   }
 
   return (
@@ -111,6 +112,25 @@ export function SignupForm() {
               required
               value={name}
               onChange={(e) => setName(e.target.value)}
+              className="pl-9 bg-card border-border"
+              disabled={isPending}
+            />
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="orgName">Organization Name</Label>
+          <div className="relative">
+            <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-muted-foreground pointer-events-none">
+              <Building2 className="h-4 w-4" />
+            </span>
+            <Input
+              id="orgName"
+              type="text"
+              placeholder="Acme Corp"
+              required
+              value={organizationName}
+              onChange={(e) => setOrganizationName(e.target.value)}
               className="pl-9 bg-card border-border"
               disabled={isPending}
             />

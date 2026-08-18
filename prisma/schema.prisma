@@ -11,6 +11,7 @@ datasource db {
 // ─── ENUMS ────────────────────────────────────────────────────────────────────
 
 enum UserRole {
+  SUPER_ADMIN
   ADMIN
   OPERATOR
   VIEWER
@@ -77,6 +78,7 @@ enum AlertSeverity {
 
 model User {
   id           String    @id @default(uuid())
+  tenantId     String?
   email        String    @unique
   name         String
   passwordHash String
@@ -87,10 +89,12 @@ model User {
   updatedAt    DateTime  @updatedAt
 
   // relations
+  tenant        Tenant?        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   services      Service[]
   refreshTokens RefreshToken[]
   auditLogs     AuditLog[]
 
+  @@index([tenantId])
   @@map("users")
 }
 
@@ -118,6 +122,7 @@ model RefreshToken {
 model Service {
   id                   String        @id @default(uuid())
   userId               String
+  tenantId             String?
   name                 String
   targetUrl            String
   method               HttpMethod    @default(GET)
@@ -136,11 +141,13 @@ model Service {
 
   // relations
   user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenant    Tenant?        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   checks    ServiceCheck[]
   incidents Incident[]
   alerts    Alert[]
 
   @@index([userId])
+  @@index([tenantId])
   @@index([enabled])
   @@index([status])
   @@map("services")
@@ -219,6 +226,7 @@ model Alert {
 model AuditLog {
   id         String   @id @default(uuid())
   userId     String?
+  tenantId   String?
   action     String
   resource   String
   resourceId String?
@@ -228,10 +236,28 @@ model AuditLog {
   createdAt  DateTime @default(now())
 
   // relations
-  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+  tenant Tenant? @relation(fields: [tenantId], references: [id], onDelete: SetNull)
 
   @@index([userId, createdAt(sort: Desc)])
+  @@index([tenantId, createdAt(sort: Desc)])
   @@index([resource, resourceId])
   @@index([createdAt(sort: Desc)])
   @@map("audit_logs")
+}
+
+// ─── TENANT ───────────────────────────────────────────────────────────────────
+
+model Tenant {
+  id        String   @id @default(uuid())
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // relations
+  users     User[]
+  services  Service[]
+  auditLogs AuditLog[]
+
+  @@map("tenants")
 }

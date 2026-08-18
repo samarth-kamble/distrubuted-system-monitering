@@ -12,6 +12,8 @@ import {
   Search,
   Globe,
   Plus,
+  Shield,
+  ShieldAlert,
 } from "lucide-react";
 import { toast } from "sonner";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -51,6 +53,29 @@ export interface LogItem {
 const EMPTY_SERVICES: ServiceNode[] = [];
 
 export function ObservabilityConsole() {
+  // Tenant & Role State for Multi-Tenant display
+  const [tenantName, setTenantName] = useState<string>("");
+  const [userRole, setUserRole] = useState<string>("");
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const userStr = localStorage.getItem("pulseguard_user");
+      if (userStr) {
+        try {
+          const user = JSON.parse(userStr);
+          if (user?.tenant?.name) {
+            setTenantName(user.tenant.name);
+          }
+          if (user?.role) {
+            setUserRole(user.role);
+          }
+        } catch (e) {
+          console.error("Failed to parse user session", e);
+        }
+      }
+    }
+  }, []);
+
   // TanStack Query backend bindings
   const {
     data: dbServices = EMPTY_SERVICES,
@@ -411,6 +436,36 @@ export function ObservabilityConsole() {
               Incidents
             </span>
           </button>
+
+          {(userRole === "ADMIN" || userRole === "SUPER_ADMIN") && (
+            <button
+              onClick={() => {
+                window.location.href = "/admin";
+                setIsMobileSidebarOpen(false);
+              }}
+              className="flex flex-col items-center justify-center w-full py-3 transition-all text-muted-foreground/70 hover:text-foreground hover:bg-muted/50 cursor-pointer"
+            >
+              <Shield className="h-4.5 w-4.5 mb-1 text-orange-500" />
+              <span className="font-mono text-[9px] uppercase tracking-tighter">
+                Admin
+              </span>
+            </button>
+          )}
+
+          {userRole === "SUPER_ADMIN" && (
+            <button
+              onClick={() => {
+                window.location.href = "/super";
+                setIsMobileSidebarOpen(false);
+              }}
+              className="flex flex-col items-center justify-center w-full py-3 transition-all text-muted-foreground/70 hover:text-foreground hover:bg-muted/50 cursor-pointer"
+            >
+              <ShieldAlert className="h-4.5 w-4.5 mb-1 text-rose-500 animate-pulse" />
+              <span className="font-mono text-[9px] uppercase tracking-tighter">
+                Super
+              </span>
+            </button>
+          )}
         </div>
 
         <button
@@ -509,6 +564,30 @@ export function ObservabilityConsole() {
               Incidents
             </span>
           </button>
+
+          {(userRole === "ADMIN" || userRole === "SUPER_ADMIN") && (
+            <button
+              onClick={() => window.location.href = "/admin"}
+              className="flex flex-col items-center justify-center w-full py-3 relative overflow-hidden group transition-all text-muted-foreground/70 hover:text-foreground hover:bg-muted/50 cursor-pointer"
+            >
+              <Shield className="h-4.5 w-4.5 mb-1 text-orange-500" />
+              <span className="font-mono text-[9px] uppercase tracking-tighter">
+                Admin
+              </span>
+            </button>
+          )}
+
+          {userRole === "SUPER_ADMIN" && (
+            <button
+              onClick={() => window.location.href = "/super"}
+              className="flex flex-col items-center justify-center w-full py-3 relative overflow-hidden group transition-all text-muted-foreground/70 hover:text-foreground hover:bg-muted/50 cursor-pointer"
+            >
+              <ShieldAlert className="h-4.5 w-4.5 mb-1 text-rose-500 animate-pulse" />
+              <span className="font-mono text-[9px] uppercase tracking-tighter">
+                Super
+              </span>
+            </button>
+          )}
         </div>
 
         <button
@@ -556,10 +635,10 @@ export function ObservabilityConsole() {
                 PulseGuard
               </span>
               <span className="text-muted-foreground/60 mx-1.5">/</span>
-              <span>Telemetry Dashboard</span>
+              <span>{tenantName ? `${tenantName} Dashboard` : "Telemetry Dashboard"}</span>
             </h1>
             <h1 className="font-sans text-xs font-bold bg-linear-to-r from-primary to-orange-500 bg-clip-text text-transparent tracking-tight sm:hidden">
-              PulseGuard
+              {tenantName || "PulseGuard"}
             </h1>
           </div>
 

@@ -12,6 +12,7 @@ export class AlertsService {
 
   async findAll(
     userId: string,
+    tenantId: string | null,
     userRole: UserRole,
     limit = 50,
     skip = 0,
@@ -24,7 +25,8 @@ export class AlertsService {
       serviceId?: string;
       type?: AlertType;
       service?: {
-        userId: string;
+        tenantId?: string | null;
+        userId?: string;
       };
     } = {};
 
@@ -38,11 +40,17 @@ export class AlertsService {
       whereClause.type = type;
     }
 
-    // Role check: Viewers can only see alerts of services they own
-    if (userRole !== UserRole.ADMIN && userRole !== UserRole.OPERATOR) {
-      whereClause.service = {
-        userId,
-      };
+    // Super Admin sees everything. Regular roles see only tenant-scoped alerts.
+    if (userRole !== UserRole.SUPER_ADMIN) {
+      if (tenantId) {
+        whereClause.service = {
+          tenantId,
+        };
+      } else {
+        whereClause.service = {
+          userId, // fallback if user has no tenant
+        };
+      }
     }
 
     return this.prisma.alert.findMany({
@@ -54,7 +62,7 @@ export class AlertsService {
     });
   }
 
-  async findOne(userId: string, userRole: UserRole, id: string) {
+  async findOne(userId: string, tenantId: string | null, userRole: UserRole, id: string) {
     const alert = await this.prisma.alert.findUnique({
       where: { id },
       include: { service: true, incident: true },
@@ -64,11 +72,17 @@ export class AlertsService {
       throw new NotFoundException(`Alert with ID ${id} not found`);
     }
 
-    if (
-      userRole !== UserRole.ADMIN &&
-      userRole !== UserRole.OPERATOR &&
-      alert.service.userId !== userId
-    ) {
+    // Bypass check for Platform Super Admins
+    if (userRole === UserRole.SUPER_ADMIN) {
+      return alert;
+    }
+
+    // Validate tenant isolation
+    const isOwner = tenantId
+      ? alert.service.tenantId === tenantId
+      : alert.service.userId === userId;
+
+    if (!isOwner) {
       throw new ForbiddenException(
         'You do not have permission to access this alert',
       );

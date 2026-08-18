@@ -11,6 +11,7 @@ import { IncidentsModule } from './incidents/incidents.module';
 import { MetricsModule } from './metrics/metrics.module';
 import { AlertsModule } from './alerts/alerts.module';
 import { AdminModule } from './admin/admin.module';
+import { SuperModule } from './super/super.module';
 import { SimulationModule } from './simulation/simulation.module';
 import { CustomThrottlerGuard } from './common/guards/throttler.guard';
 import { RequestIdMiddleware } from './common/middleware/request-id.middleware';
@@ -24,6 +25,7 @@ import { RequestIdMiddleware } from './common/middleware/request-id.middleware';
     MetricsModule,
     AlertsModule,
     AdminModule,
+    SuperModule,
     SimulationModule,
     ThrottlerModule.forRoot([
       {

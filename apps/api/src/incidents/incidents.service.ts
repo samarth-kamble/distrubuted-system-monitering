@@ -18,6 +18,7 @@ export class IncidentsService {
 
   async findAll(
     userId: string,
+    tenantId: string | null,
     userRole: UserRole,
     limit = 50,
     skip = 0,
@@ -28,7 +29,8 @@ export class IncidentsService {
       status?: IncidentStatus;
       serviceId?: string;
       service?: {
-        userId: string;
+        tenantId?: string | null;
+        userId?: string;
       };
     } = {};
 
@@ -39,11 +41,17 @@ export class IncidentsService {
       whereClause.serviceId = serviceId;
     }
 
-    // Role check: Viewers can only list incidents of their own services
-    if (userRole !== UserRole.ADMIN && userRole !== UserRole.OPERATOR) {
-      whereClause.service = {
-        userId,
-      };
+    // Super Admin sees everything. Regular roles see only tenant-scoped incidents.
+    if (userRole !== UserRole.SUPER_ADMIN) {
+      if (tenantId) {
+        whereClause.service = {
+          tenantId,
+        };
+      } else {
+        whereClause.service = {
+          userId, // fallback if user has no tenant
+        };
+      }
     }
 
     return this.prisma.incident.findMany({
@@ -55,7 +63,7 @@ export class IncidentsService {
     });
   }
 
-  async findOne(userId: string, userRole: UserRole, id: string) {
+  async findOne(userId: string, tenantId: string | null, userRole: UserRole, id: string) {
     const incident = await this.prisma.incident.findUnique({
       where: { id },
       include: { service: true },
@@ -65,11 +73,17 @@ export class IncidentsService {
       throw new NotFoundException(`Incident with ID ${id} not found`);
     }
 
-    if (
-      userRole !== UserRole.ADMIN &&
-      userRole !== UserRole.OPERATOR &&
-      incident.service.userId !== userId
-    ) {
+    // Bypass check for Platform Super Admins
+    if (userRole === UserRole.SUPER_ADMIN) {
+      return incident;
+    }
+
+    // Validate tenant isolation
+    const isOwner = tenantId
+      ? incident.service.tenantId === tenantId
+      : incident.service.userId === userId;
+
+    if (!isOwner) {
       throw new ForbiddenException(
         'You do not have permission to access this incident',
       );
@@ -78,8 +92,8 @@ export class IncidentsService {
     return incident;
   }
 
-  async acknowledge(userId: string, userRole: UserRole, id: string) {
-    const incident = await this.findOne(userId, userRole, id);
+  async acknowledge(userId: string, tenantId: string | null, userRole: UserRole, id: string) {
+    const incident = await this.findOne(userId, tenantId, userRole, id);
 
     if (incident.status === IncidentStatus.RESOLVED) {
       throw new ForbiddenException('Cannot acknowledge a resolved incident');
@@ -94,8 +108,8 @@ export class IncidentsService {
     });
   }
 
-  async resolve(userId: string, userRole: UserRole, id: string) {
-    const incident = await this.findOne(userId, userRole, id);
+  async resolve(userId: string, tenantId: string | null, userRole: UserRole, id: string) {
+    const incident = await this.findOne(userId, tenantId, userRole, id);
 
     if (incident.status === IncidentStatus.RESOLVED) {
       throw new ForbiddenException('Incident is already resolved');

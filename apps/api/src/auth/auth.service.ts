@@ -25,7 +25,12 @@ export class AuthService {
     user: Omit<User, 'passwordHash'>,
     existingFamily?: string,
   ) {
-    const payload = { sub: user.id, email: user.email };
+    const payload = { 
+      sub: user.id, 
+      email: user.email,
+      tenantId: user.tenantId,
+      role: user.role
+    };
     const accessToken = this.jwtService.sign(payload);
 
     // Generate secure cryptographically random refresh token
@@ -63,11 +68,27 @@ export class AuthService {
 
     const hashedPassword = await argon2.hash(dto.password);
 
+    // Support Multi-Tenant: Create Tenant if organization name is specified
+    let tenantId: string | null = null;
+    let initialRole: 'ADMIN' | 'VIEWER' = 'VIEWER';
+
+    if (dto.organizationName) {
+      const tenant = await this.prisma.tenant.create({
+        data: {
+          name: dto.organizationName,
+        },
+      });
+      tenantId = tenant.id;
+      initialRole = 'ADMIN'; // Organization creator is Admin
+    }
+
     const user = await this.prisma.user.create({
       data: {
         email: dto.email.toLowerCase(),
         passwordHash: hashedPassword,
         name: dto.name || dto.email.split('@')[0],
+        tenantId,
+        role: initialRole,
       },
     });
 

@@ -19,6 +19,10 @@ export class RegisterDto {
   @IsString({ message: 'Name must be a string' })
   @IsOptional()
   name?: string;
+
+  @IsString({ message: 'Organization name must be a string' })
+  @IsOptional()
+  organizationName?: string;
 }
 
 export class LoginDto {

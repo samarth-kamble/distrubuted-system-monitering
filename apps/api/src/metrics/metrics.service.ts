@@ -182,12 +182,16 @@ export class MetricsService {
     return this.registry.metrics();
   }
 
-  async getSummary(userId: string, userRole: UserRole) {
-    const whereClause: { userId?: string } = {};
+  async getSummary(userId: string, tenantId: string | null, userRole: UserRole) {
+    const whereClause: { tenantId?: string | null; userId?: string } = {};
 
-    // Role scope: Viewers only see statistics for their own services
-    if (userRole !== UserRole.ADMIN && userRole !== UserRole.OPERATOR) {
-      whereClause.userId = userId;
+    // Super Admin sees global metrics. Regular roles see only tenant-scoped services.
+    if (userRole !== UserRole.SUPER_ADMIN) {
+      if (tenantId) {
+        whereClause.tenantId = tenantId;
+      } else {
+        whereClause.userId = userId;
+      }
     }
 
     const services = await this.prisma.service.findMany({
@@ -210,16 +214,23 @@ export class MetricsService {
     const incidentWhereClause: {
       status: { in: IncidentStatus[] };
       service?: {
-        userId: string;
+        tenantId?: string | null;
+        userId?: string;
       };
     } = {
       status: { in: [IncidentStatus.OPEN, IncidentStatus.ACKNOWLEDGED] },
     };
 
-    if (userRole !== UserRole.ADMIN && userRole !== UserRole.OPERATOR) {
-      incidentWhereClause.service = {
-        userId,
-      };
+    if (userRole !== UserRole.SUPER_ADMIN) {
+      if (tenantId) {
+        incidentWhereClause.service = {
+          tenantId,
+        };
+      } else {
+        incidentWhereClause.service = {
+          userId,
+        };
+      }
     }
 
     const activeIncidents = await this.prisma.incident.count({

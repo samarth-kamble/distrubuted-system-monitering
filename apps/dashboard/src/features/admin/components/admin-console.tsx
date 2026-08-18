@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Users,
   ShieldAlert,
@@ -38,6 +38,27 @@ export function AdminConsole() {
     "users",
   );
   const [userQuery, setUserQuery] = useState("");
+  const [tenantName, setTenantName] = useState<string>("");
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const userStr = localStorage.getItem("pulseguard_user");
+      if (userStr) {
+        try {
+          const user = JSON.parse(userStr);
+          if (user?.tenant?.name) {
+            setTenantName(user.tenant.name);
+          }
+          if (user?.role !== "ADMIN" && user?.role !== "SUPER_ADMIN") {
+            toast.error("Access denied. Admin privileges required.");
+            window.location.href = "/";
+          }
+        } catch (e) {
+          console.error(e);
+        }
+      }
+    }
+  }, []);
 
   // Live queries
   const { data: dbUsers = [], isLoading: isLoadingUsers } = useAdminUsers();
@@ -127,9 +148,9 @@ export function AdminConsole() {
         </div>
 
         <button
-          onClick={() => window.location.reload()}
-          className="mt-auto p-3 text-muted-foreground/50 hover:text-rose-500 hover:bg-rose-500/10 rounded-xl transition-all cursor-pointer"
-          title="LOGOUT_SESSION"
+          onClick={() => window.location.href = "/"}
+          className="mt-auto p-3 text-muted-foreground/50 hover:text-primary hover:bg-primary/10 rounded-xl transition-all cursor-pointer"
+          title="BACK_TO_DASHBOARD"
         >
           <Power className="h-5 w-5" />
         </button>
@@ -141,7 +162,7 @@ export function AdminConsole() {
         <header className="h-14 border-b border-border/40 bg-card/60 backdrop-blur-md px-6 flex items-center justify-between z-10 shrink-0">
           <div className="flex items-center gap-3">
             <h1 className="text-xs font-bold font-mono tracking-wider uppercase text-foreground">
-              PulseGuard Admin HQ
+              PulseGuard Admin HQ {tenantName ? `| ${tenantName}` : ""}
             </h1>
             <span className="bg-rose-500/10 text-rose-500 border border-rose-500/20 px-2 py-0.5 rounded-full text-[9px] font-semibold tracking-wide">
               Security Domain

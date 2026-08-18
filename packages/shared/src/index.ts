@@ -1,2 +1,2 @@
-export * from './types';
-export * from './constants/thresholds';
+export * from './types/index.js';
+export * from './constants/thresholds.js';

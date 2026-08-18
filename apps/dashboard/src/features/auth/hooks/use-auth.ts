@@ -9,7 +9,12 @@ export interface UserProfile {
   id: string
   email: string
   name: string
-  role: "ADMIN" | "VIEWER"
+  role: "SUPER_ADMIN" | "ADMIN" | "OPERATOR" | "VIEWER"
+  tenantId: string | null
+  tenant?: {
+    id: string
+    name: string
+  } | null
   createdAt?: string
   isActive?: boolean
 }

@@ -1,8 +1,16 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "noEmit": false,
+    "declaration": true,
+    "outDir": "./dist",
     "baseUrl": ".",
-    "rootDir": "src"
+    "rootDir": "src",
+    "types": [],
+    "allowImportingTsExtensions": false,
+    "verbatimModuleSyntax": false
   },
   "include": ["src/**/*.ts"]
 }
