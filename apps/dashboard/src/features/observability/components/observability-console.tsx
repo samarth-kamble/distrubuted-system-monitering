@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useMemo } from "react";
+import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import Image from "next/image";
 import {
   Radio,
@@ -88,9 +89,21 @@ export function ObservabilityConsole() {
   const [selectedNode, setSelectedNode] = useState<ServiceNode | null>(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
-  const [activeView, setActiveView] = useState<
-    "nodes" | "logs" | "incidents" | "alerts" | "metrics"
-  >("nodes");
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+
+  const urlView = searchParams.get("view");
+  const activeView = (urlView && ["nodes", "logs", "incidents", "alerts", "metrics"].includes(urlView))
+    ? (urlView as "nodes" | "logs" | "incidents" | "alerts" | "metrics")
+    : "nodes";
+
+  const setActiveView = (view: "nodes" | "logs" | "incidents" | "alerts" | "metrics") => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("view", view);
+    router.replace(`${pathname}?${params.toString()}`);
+  };
+
   const [liveLogs, setLiveLogs] = useState<LogItem[]>([]);
   const [isLogStreamPaused, setIsLogStreamPaused] = useState(false);
   const [logLevelFilter, setLogLevelFilter] = useState<

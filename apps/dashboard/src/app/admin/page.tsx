@@ -1,5 +1,5 @@
-import { AdminConsole } from "@/features/admin/components/admin-console";
+import { redirect } from "next/navigation";
 
 export default function AdminPage() {
-  return <AdminConsole />;
+  redirect("/admin/users");
 }
