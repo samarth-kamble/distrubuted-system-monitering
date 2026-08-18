@@ -13,6 +13,7 @@ export function SignupForm() {
   const [name, setName] = useState("")
   const [email, setEmail] = useState("")
   const [organizationName, setOrganizationName] = useState("")
+  const [organizationBio, setOrganizationBio] = useState("")
   const [password, setPassword] = useState("")
   const [showPassword, setShowPassword] = useState(false)
 
@@ -20,7 +21,7 @@ export function SignupForm() {
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault()
-    signup({ name, email, password, organizationName })
+    signup({ name, email, password, organizationName, organizationBio })
   }
 
   return (
@@ -131,6 +132,24 @@ export function SignupForm() {
               required
               value={organizationName}
               onChange={(e) => setOrganizationName(e.target.value)}
+              className="pl-9 bg-card border-border"
+              disabled={isPending}
+            />
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="orgBio">Organization Bio</Label>
+          <div className="relative">
+            <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-muted-foreground pointer-events-none">
+              <Shield className="h-4 w-4" />
+            </span>
+            <Input
+              id="orgBio"
+              type="text"
+              placeholder="What does your company do?"
+              value={organizationBio}
+              onChange={(e) => setOrganizationBio(e.target.value)}
               className="pl-9 bg-card border-border"
               disabled={isPending}
             />

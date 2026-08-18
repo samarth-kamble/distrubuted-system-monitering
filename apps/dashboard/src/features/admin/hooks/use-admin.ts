@@ -58,3 +58,18 @@ export function useAdminAuditLogs() {
     },
   });
 }
+
+export function useCreateTenantUser() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (payload: Record<string, string>) => {
+      return apiRequest<UserAccount>("/api/v1/admin/users", {
+        method: "POST",
+        body: payload,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+    },
+  });
+}

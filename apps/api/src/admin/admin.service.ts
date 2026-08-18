@@ -1,10 +1,52 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { UserRole } from '@prisma/client';
+import * as argon2 from 'argon2';
+import { CreateUserDto } from './dto/create-user.dto';
 
 @Injectable()
 export class AdminService {
   constructor(private readonly prisma: PrismaService) {}
+
+  async createUser(tenantId: string | null, dto: CreateUserDto) {
+    if (!tenantId) {
+      throw new ForbiddenException('You must belong to a tenant to create users.');
+    }
+
+    const existingUser = await this.prisma.user.findUnique({
+      where: { email: dto.email.toLowerCase() },
+    });
+
+    if (existingUser) {
+      throw new ConflictException('A user with this email already exists');
+    }
+
+    // Only allow Viewer or Operator role creation from Admin Console (Admins cannot create other Admins unless required, let's allow ADMIN, VIEWER, OPERATOR but restrict SUPER_ADMIN)
+    if (dto.role === UserRole.SUPER_ADMIN) {
+      throw new ForbiddenException('Cannot register a Super Admin account.');
+    }
+
+    const hashedPassword = await argon2.hash(dto.password);
+
+    return this.prisma.user.create({
+      data: {
+        email: dto.email.toLowerCase(),
+        passwordHash: hashedPassword,
+        name: dto.name,
+        role: dto.role,
+        tenantId,
+      },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        isActive: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+  }
 
   async getUsers(tenantId: string | null) {
     if (!tenantId) {

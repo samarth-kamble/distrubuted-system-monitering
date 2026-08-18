@@ -6,6 +6,7 @@ import {
   Body,
   UseGuards,
   Query,
+  Post,
 } from '@nestjs/common';
 import { AdminService } from './admin.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -13,6 +14,7 @@ import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
 import { UserRole } from '@prisma/client';
 import { Audit } from '../auth/audit.decorator';
+import { CreateUserDto } from './dto/create-user.dto';
 
 import { Request } from '@nestjs/common';
 import { Request as ExpressRequest } from 'express';
@@ -30,6 +32,16 @@ interface RequestWithUser extends ExpressRequest {
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class AdminController {
   constructor(private readonly adminService: AdminService) {}
+
+  @Post('users')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
+  @Audit({ action: 'create_user', resource: 'user' })
+  async createUser(
+    @Request() req: RequestWithUser,
+    @Body() dto: CreateUserDto,
+  ) {
+    return this.adminService.createUser(req.user.tenantId, dto);
+  }
 
   @Get('users')
   @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)

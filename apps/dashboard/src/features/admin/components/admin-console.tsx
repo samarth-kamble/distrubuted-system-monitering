@@ -12,6 +12,7 @@ import {
   Info,
   ShieldCheck,
   Power,
+  Plus,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,6 +30,7 @@ import {
   useAdminUsers,
   useUpdateUserRole,
   useAdminAuditLogs,
+  useCreateTenantUser,
 } from "../hooks/use-admin";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
@@ -39,6 +41,13 @@ export function AdminConsole() {
   );
   const [userQuery, setUserQuery] = useState("");
   const [tenantName, setTenantName] = useState<string>("");
+
+  // Modal and User Creation states
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [newUserName, setNewUserName] = useState("");
+  const [newUserEmail, setNewUserEmail] = useState("");
+  const [newUserPassword, setNewUserPassword] = useState("");
+  const [newUserRole, setNewUserRole] = useState<"OPERATOR" | "VIEWER">("VIEWER");
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -64,6 +73,7 @@ export function AdminConsole() {
   const { data: dbUsers = [], isLoading: isLoadingUsers } = useAdminUsers();
   const { data: dbAuditLogs = [], isLoading: isLoadingAudit } = useAdminAuditLogs();
   const { mutate: updateRole } = useUpdateUserRole();
+  const { mutate: createUser, isPending: isCreatingUser } = useCreateTenantUser();
 
   // Search filter for user directory with safe optional chaining
   const filteredUsers = dbUsers.filter(
@@ -88,6 +98,31 @@ export function AdminConsole() {
 
   const handleToggleUserStatus = (id: string) => {
     toast.error("Account locking is not implemented in the current backend version.");
+  };
+
+  const handleCreateUserSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    createUser(
+      {
+        name: newUserName,
+        email: newUserEmail,
+        password: newUserPassword,
+        role: newUserRole,
+      },
+      {
+        onSuccess: () => {
+          toast.success("User created successfully!");
+          setIsCreateModalOpen(false);
+          setNewUserName("");
+          setNewUserEmail("");
+          setNewUserPassword("");
+          setNewUserRole("VIEWER");
+        },
+        onError: (err: any) => {
+          toast.error(err.message || "Failed to create user.");
+        },
+      }
+    );
   };
 
   return (
@@ -195,15 +230,24 @@ export function AdminConsole() {
                   </p>
                 </div>
 
-                <div className="relative w-full sm:w-64">
-                  <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground/60" />
-                  <Input
-                    type="text"
-                    placeholder="Search name or email..."
-                    value={userQuery}
-                    onChange={(e) => setUserQuery(e.target.value)}
-                    className="pl-8 text-[11px] h-8 bg-card border-border"
-                  />
+                <div className="flex items-center gap-2 w-full sm:w-auto">
+                  <div className="relative w-full sm:w-64">
+                    <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground/60" />
+                    <Input
+                      type="text"
+                      placeholder="Search name or email..."
+                      value={userQuery}
+                      onChange={(e) => setUserQuery(e.target.value)}
+                      className="pl-8 text-[11px] h-8 bg-card border-border"
+                    />
+                  </div>
+                  <Button
+                    onClick={() => setIsCreateModalOpen(true)}
+                    className="h-8 text-[11px] font-bold px-3 shrink-0 cursor-pointer"
+                  >
+                    <Plus className="h-3.5 w-3.5 mr-1" />
+                    Add User
+                  </Button>
                 </div>
               </div>
 
@@ -511,6 +555,97 @@ export function AdminConsole() {
           )}
         </main>
       </div>
+
+      {/* 🚀 Create User Modal Overlay */}
+      {isCreateModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
+          <div className="bg-card border border-border w-full max-w-md rounded-xl p-5 shadow-lg space-y-4 animate-in fade-in zoom-in-95 duration-150">
+            <div>
+              <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                <Users className="h-4.5 w-4.5 text-primary" />
+                Create Tenant User
+              </h3>
+              <p className="text-[11px] text-muted-foreground mt-0.5">
+                Register a new operator or viewer linked directly to your organization.
+              </p>
+            </div>
+
+            <form onSubmit={handleCreateUserSubmit} className="space-y-4 text-xs">
+              <div className="space-y-1.5">
+                <label className="font-semibold text-foreground">Full Name</label>
+                <Input
+                  type="text"
+                  placeholder="Jane Doe"
+                  required
+                  value={newUserName}
+                  onChange={(e) => setNewUserName(e.target.value)}
+                  className="h-8 bg-muted/20 border-border text-xs"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="font-semibold text-foreground">Email Address</label>
+                <Input
+                  type="email"
+                  placeholder="jane.doe@company.com"
+                  required
+                  value={newUserEmail}
+                  onChange={(e) => setNewUserEmail(e.target.value)}
+                  className="h-8 bg-muted/20 border-border text-xs"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="font-semibold text-foreground">Password</label>
+                <Input
+                  type="password"
+                  placeholder="Minimum 6 characters"
+                  required
+                  value={newUserPassword}
+                  onChange={(e) => setNewUserPassword(e.target.value)}
+                  className="h-8 bg-muted/20 border-border text-xs"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="font-semibold text-foreground">Role Scope</label>
+                <select
+                  value={newUserRole}
+                  onChange={(e) => setNewUserRole(e.target.value as any)}
+                  className="w-full h-8 px-2.5 rounded-lg border border-border bg-muted/20 text-xs focus:outline-none focus:border-primary text-foreground cursor-pointer"
+                >
+                  <option value="VIEWER" className="bg-card">VIEWER (Read-Only access)</option>
+                  <option value="OPERATOR" className="bg-card">OPERATOR (Incident resolution & updates)</option>
+                </select>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2">
+                <Button
+                  type="button"
+                  onClick={() => setIsCreateModalOpen(false)}
+                  className="h-8 text-[11px] font-semibold bg-muted hover:bg-muted/80 text-foreground border border-border cursor-pointer"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={isCreatingUser}
+                  className="h-8 text-[11px] font-bold cursor-pointer"
+                >
+                  {isCreatingUser ? (
+                    <>
+                      <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                      Creating...
+                    </>
+                  ) : (
+                    "Register Account"
+                  )}
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

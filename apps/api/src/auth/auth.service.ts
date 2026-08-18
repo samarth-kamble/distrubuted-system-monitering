@@ -76,6 +76,7 @@ export class AuthService {
       const tenant = await this.prisma.tenant.create({
         data: {
           name: dto.organizationName,
+          bio: dto.organizationBio || null,
         },
       });
       tenantId = tenant.id;
@@ -100,6 +101,7 @@ export class AuthService {
   async login(dto: LoginDto) {
     const user = await this.prisma.user.findUnique({
       where: { email: dto.email.toLowerCase() },
+      include: { tenant: true },
     });
 
     if (!user) {
@@ -161,7 +163,7 @@ export class AuthService {
 
     const dbToken = await this.prisma.refreshToken.findUnique({
       where: { tokenHash },
-      include: { user: true },
+      include: { user: { include: { tenant: true } } },
     });
 
     if (!dbToken) {
@@ -226,6 +228,7 @@ export class AuthService {
   async validateUserById(userId: string) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
+      include: { tenant: true },
     });
 
     if (!user) {
