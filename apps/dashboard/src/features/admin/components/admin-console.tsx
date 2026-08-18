@@ -31,16 +31,21 @@ import {
   useUpdateUserRole,
   useAdminAuditLogs,
   useCreateTenantUser,
+  useUpdateTenantSettings,
 } from "../hooks/use-admin";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+import { Loader2, Settings } from "lucide-react";
 
 export function AdminConsole() {
-  const [activeTab, setActiveTab] = useState<"users" | "audit" | "overview">(
+  const [activeTab, setActiveTab] = useState<"users" | "audit" | "overview" | "settings">(
     "users",
   );
   const [userQuery, setUserQuery] = useState("");
   const [tenantName, setTenantName] = useState<string>("");
+  const [orgBio, setOrgBio] = useState<string>("");
+
+  const [orgNameInput, setOrgNameInput] = useState("");
+  const [orgBioInput, setOrgBioInput] = useState("");
 
   // Modal and User Creation states
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -57,6 +62,11 @@ export function AdminConsole() {
           const user = JSON.parse(userStr);
           if (user?.tenant?.name) {
             setTenantName(user.tenant.name);
+            setOrgNameInput(user.tenant.name);
+          }
+          if (user?.tenant?.bio) {
+            setOrgBio(user.tenant.bio);
+            setOrgBioInput(user.tenant.bio);
           }
           if (user?.role !== "ADMIN" && user?.role !== "SUPER_ADMIN") {
             toast.error("Access denied. Admin privileges required.");
@@ -74,6 +84,24 @@ export function AdminConsole() {
   const { data: dbAuditLogs = [], isLoading: isLoadingAudit } = useAdminAuditLogs();
   const { mutate: updateRole } = useUpdateUserRole();
   const { mutate: createUser, isPending: isCreatingUser } = useCreateTenantUser();
+  const { mutate: updateTenantSettings, isPending: isUpdatingTenant } = useUpdateTenantSettings();
+
+  const handleUpdateTenantSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    updateTenantSettings(
+      { name: orgNameInput, bio: orgBioInput },
+      {
+        onSuccess: () => {
+          toast.success("Organization settings updated successfully.");
+          setTenantName(orgNameInput);
+          setOrgBio(orgBioInput);
+        },
+        onError: (err: any) => {
+          toast.error(err.message || "Failed to update settings.");
+        },
+      }
+    );
+  };
 
   // Search filter for user directory with safe optional chaining
   const filteredUsers = dbUsers.filter(
@@ -178,6 +206,21 @@ export function AdminConsole() {
             <BarChart3 className="h-4.5 w-4.5 mb-1" />
             <span className="font-mono text-[9px] uppercase tracking-tighter">
               System
+            </span>
+          </button>
+
+          {/* Workspace Settings Navigation Button */}
+          <button
+            onClick={() => setActiveTab("settings")}
+            className={`flex flex-col items-center justify-center w-full py-3 relative overflow-hidden transition-all cursor-pointer ${
+              activeTab === "settings"
+                ? "bg-primary/10 text-primary border-l-4 border-primary"
+                : "text-muted-foreground/70 hover:text-foreground hover:bg-muted/50"
+            }`}
+          >
+            <Settings className="h-4.5 w-4.5 mb-1" />
+            <span className="font-mono text-[9px] uppercase tracking-tighter">
+              Settings
             </span>
           </button>
         </div>
@@ -551,6 +594,63 @@ export function AdminConsole() {
                   </div>
                 </div>
               </div>
+            </div>
+          )}
+
+          {/* TAB 4: WORKSPACE SETTINGS */}
+          {activeTab === "settings" && (
+            <div className="space-y-5 bg-card border border-border/50 rounded-xl p-5 shadow-2xs">
+              <div className="border-b border-border/40 pb-4">
+                <h2 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                  <Settings className="h-4.5 w-4.5 text-primary" />
+                  Organization Settings
+                </h2>
+                <p className="text-[11px] text-muted-foreground mt-0.5">
+                  Update corporate parameters, tenant identifiers, and organization metadata.
+                </p>
+              </div>
+
+              <form onSubmit={handleUpdateTenantSubmit} className="space-y-5 max-w-xl text-xs">
+                <div className="space-y-1.5">
+                  <label className="font-semibold text-foreground">Organization Name</label>
+                  <Input
+                    type="text"
+                    required
+                    placeholder="Acme Corporation"
+                    value={orgNameInput}
+                    onChange={(e) => setOrgNameInput(e.target.value)}
+                    className="h-8 bg-muted/20 border-border text-xs"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="font-semibold text-foreground">Organization Description / Bio</label>
+                  <textarea
+                    placeholder="Describe your corporate goals or monitor environments..."
+                    rows={4}
+                    value={orgBioInput}
+                    onChange={(e) => setOrgBioInput(e.target.value)}
+                    className="w-full px-3 py-2 rounded-lg border border-border bg-muted/20 text-xs focus:outline-none focus:border-primary text-foreground font-sans resize-none"
+                  />
+                </div>
+
+                <div className="flex justify-end pt-2">
+                  <Button
+                    type="submit"
+                    disabled={isUpdatingTenant}
+                    className="h-8 text-[11px] font-bold cursor-pointer"
+                  >
+                    {isUpdatingTenant ? (
+                      <>
+                        <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                        Saving...
+                      </>
+                    ) : (
+                      "Save Settings"
+                    )}
+                  </Button>
+                </div>
+              </form>
             </div>
           )}
         </main>

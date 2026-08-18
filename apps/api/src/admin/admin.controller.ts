@@ -43,6 +43,16 @@ export class AdminController {
     return this.adminService.createUser(req.user.tenantId, dto);
   }
 
+  @Patch('tenant')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
+  @Audit({ action: 'update_tenant', resource: 'tenant' })
+  async updateTenantSettings(
+    @Request() req: RequestWithUser,
+    @Body() body: { name?: string; bio?: string },
+  ) {
+    return this.adminService.updateTenantSettings(req.user.tenantId, body);
+  }
+
   @Get('users')
   @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
   async getUsers(@Request() req: RequestWithUser) {

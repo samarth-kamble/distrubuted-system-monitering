@@ -73,3 +73,33 @@ export function useCreateTenantUser() {
     },
   });
 }
+
+export function useUpdateTenantSettings() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (payload: { name?: string; bio?: string }) => {
+      return apiRequest<{ id: string; name: string; bio: string | null }>("/api/v1/admin/tenant", {
+        method: "PATCH",
+        body: payload,
+      });
+    },
+    onSuccess: (data) => {
+      if (typeof window !== "undefined") {
+        const userStr = localStorage.getItem("pulseguard_user");
+        if (userStr) {
+          try {
+            const user = JSON.parse(userStr);
+            if (user?.tenant) {
+              user.tenant.name = data.name;
+              user.tenant.bio = data.bio;
+              localStorage.setItem("pulseguard_user", JSON.stringify(user));
+            }
+          } catch (e) {
+            console.error(e);
+          }
+        }
+      }
+      queryClient.invalidateQueries({ queryKey: ["user-profile"] });
+    },
+  });
+}

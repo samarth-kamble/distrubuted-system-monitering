@@ -8,6 +8,20 @@ import { CreateUserDto } from './dto/create-user.dto';
 export class AdminService {
   constructor(private readonly prisma: PrismaService) {}
 
+  async updateTenantSettings(tenantId: string | null, data: { name?: string; bio?: string }) {
+    if (!tenantId) {
+      throw new ForbiddenException('No active organization context found.');
+    }
+
+    return this.prisma.tenant.update({
+      where: { id: tenantId },
+      data: {
+        name: data.name,
+        bio: data.bio,
+      },
+    });
+  }
+
   async createUser(tenantId: string | null, dto: CreateUserDto) {
     if (!tenantId) {
       throw new ForbiddenException('You must belong to a tenant to create users.');
